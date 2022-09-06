@@ -4,7 +4,6 @@ module msgpack
 struct Config {
 	// no_fixed_num says to output all signed integers as 2-bytes, never as 1-byte fixednum.
 	no_fixed_num bool
-
 	// write_ext controls whether the new spec is honored.
 	//
 	// With write_ext=true, we can encode configured extensions with extension tags
@@ -18,10 +17,8 @@ struct Config {
 	//    reserved byte descriptors like Str8 and those enabling the new msgpack Binary type
 	//    are not encoded.
 	write_ext bool
-
 	// positive_int_unsigned says to encode positive integers as unsigned.
 	positive_int_unsigned bool
-
 	// string_to_raw controls how strings are encoded.
 	//
 	// As a go string is just an (immutable) sequence of bytes,

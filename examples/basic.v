@@ -3,9 +3,9 @@ module main
 import msgpack
 import time
 
-struct TestStructA{
-	field_a int    [codec: 'codecdata1']
-	field_b string [codec: 'codecdata2']
+struct TestStructA {
+	field_a int         [codec: 'codecdata1']
+	field_b string      [codec: 'codecdata2']
 	field_c TestStructB
 	field_d time.Time
 }
@@ -18,10 +18,10 @@ struct TestStructB {
 fn main() {
 	mut encoder := msgpack.new_encoder()
 	ts := TestStructA{
-		field_a: 111,
+		field_a: 111
 		field_b: 'TestStructA.field_b'
 		field_c: TestStructB{
-			field_a: 222,
+			field_a: 222
 			field_b: 'TestStructB.field_b'
 		}
 		field_d: time.now()

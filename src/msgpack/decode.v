@@ -4,7 +4,7 @@ import time
 import encoding.hex
 import encoding.binary
 
-const(
+const (
 	msg_bad_desc = 'unrecognized descriptor byte'
 )
 
@@ -103,19 +103,19 @@ fn (mut d Decoder) decode_() ? {
 			println('else: $d.bd')
 			if d.bd in [mp_bin_8, mp_bin_16, mp_bin_32] {
 				println('bin')
-			}
-			else if d.bd in [mp_str_8, mp_str_16, mp_str_32] || (d.bd >= mp_fix_str_min && d.bd <= mp_fix_str_max) {
+			} else if d.bd in [mp_str_8, mp_str_16, mp_str_32]
+				|| (d.bd >= mp_fix_str_min && d.bd <= mp_fix_str_max) {
 				println('string')
 				d.decode_string()?
-			}
-			else if d.bd in [mp_array_16, mp_array_32] || (d.bd >= mp_fix_array_min && d.bd <= mp_fix_array_max) {
+			} else if d.bd in [mp_array_16, mp_array_32]
+				|| (d.bd >= mp_fix_array_min && d.bd <= mp_fix_array_max) {
 				println('array')
-			}
-			else if d.bd in [mp_map_16, mp_map_32] || (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
+			} else if d.bd in [mp_map_16, mp_map_32]
+				|| (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
 				println('map')
 				d.decode_map()?
-			}
-			else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16) || (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
+			} else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16)
+				|| (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
 				println('ext')
 			}
 		}
@@ -172,7 +172,9 @@ fn (mut d Decoder) decode_string() ? {
 				else { msgpack_container_str }
 			}
 		}
-		else { msgpack_container_raw_legacy }
+		else {
+			msgpack_container_raw_legacy
+		}
 	}
 	len := d.read_container_len(ct)?
 	x := d.read_n(len)
@@ -203,13 +205,14 @@ fn (mut d Decoder) container_type() ValueType {
 		return .nil_
 	} else if bd == mp_bin_8 || bd == mp_bin_16 || bd == mp_bin_32 {
 		return .bytes
-	} else if bd == mp_str_8 || bd == mp_str_16 || bd == mp_str_32 ||
-		(bd >= mp_fix_str_min && bd <= mp_fix_str_max) {
+	} else if bd == mp_str_8 || bd == mp_str_16 || bd == mp_str_32
+		|| (bd >= mp_fix_str_min && bd <= mp_fix_str_max) {
 		if d.config.write_ext || d.config.string_raw { // UTF-8 string (new spec)
 			return .string_
 		}
 		return .bytes // raw (old spec)
-	} else if bd == mp_array_16 || bd == mp_array_32 || (bd >= mp_fix_array_min && bd <= mp_fix_array_max) {
+	} else if bd == mp_array_16 || bd == mp_array_32
+		|| (bd >= mp_fix_array_min && bd <= mp_fix_array_max) {
 		return .array
 	} else if bd == mp_map_16 || bd == mp_map_32 || (bd >= mp_fix_map_min && bd <= mp_fix_map_max) {
 		return .map_
@@ -229,7 +232,7 @@ fn (mut d Decoder) read_container_len(ct MsgpackContainerType) ?int {
 		return int(ct.b_fix_min ^ bd)
 	} else {
 		// return('cannot read container length: %s: hex: %x, decimal: %d', msg_bad_desc, bd, bd)
-		return error('cannot read container length: $msg_bad_desc: hex: ${bd.hex()}, decimal: $bd')
+		return error('cannot read container length: $msgpack.msg_bad_desc: hex: $bd.hex(), decimal: $bd')
 	}
 	// d.bdRead = false
 	// return
@@ -369,8 +372,8 @@ fn (mut d Decoder) read_1() u8 {
 }
 
 fn (mut d Decoder) read_n(len int) []u8 {
-	b := d.buffer[d.pos..d.pos+len]
-	d.pos+=len
+	b := d.buffer[d.pos..d.pos + len]
+	d.pos += len
 	d.next()
 	return b
 }

@@ -6,8 +6,8 @@ import time
 
 struct Encoder {
 mut:
-	b         strings.Builder = strings.new_builder(1000)
-	config    Config = default_config()
+	b      strings.Builder = strings.new_builder(1000)
+	config Config = default_config()
 }
 
 pub fn new_encoder() Encoder {
@@ -45,24 +45,23 @@ pub fn (mut e Encoder) encode<T>(data T) {
 		e.encode_f64(data)
 	} $else $if T.typ is time.Time {
 		e.encode_time(data)
-	}
-	$else $if T is $Array {
+	} $else $if T is $Array {
 		e.write_array_start(data.len)
 		for value in data {
 			e.encode(value)
 		}
-	}
-	$else $if T is $Map {
+	} $else $if T is $Map {
 		e.write_map_start(data.len)
 		for key, value in data {
 			e.encode(key)
 			e.encode(value)
 		}
-	}
-	$else $if T is $Struct {
+	} $else $if T is $Struct {
 		// TODO: is there currently a way to get T.fields.len? if not, add it.
 		mut fields_len := 0
-		$for _ in T.fields { fields_len++ }
+		$for _ in T.fields {
+			fields_len++
+		}
 		if fields_len > 0 {
 			e.write_map_start(1)
 			e.encode_string(T.name)
@@ -191,13 +190,11 @@ pub fn (mut e Encoder) encode_f64(f f64) {
 }
 
 pub fn (mut e Encoder) encode_map(s string) {
-
 }
 
 pub fn (mut e Encoder) encode_nil() {
 	e.write_u8(mp_nil)
 }
-
 
 pub fn (mut e Encoder) encode_string(s string) {
 	// println('encode_string: $s')
@@ -208,7 +205,9 @@ pub fn (mut e Encoder) encode_string(s string) {
 				else { msgpack_container_str }
 			}
 		}
-		else { msgpack_container_raw_legacy }
+		else {
+			msgpack_container_raw_legacy
+		}
 	}
 	e.write_container_len(ct, s.len)
 	if s.len > 0 {
@@ -246,7 +245,7 @@ pub fn (mut e Encoder) encode_time(t time.Time) {
 	e.write_u32(u32(t.unix))
 	// NOTE: automatically use the best storage depending if we need nanosecond
 	// precision or not. time.Time doesn't support nanosecond currently (I think)
-	// 
+	//
 	// t = t.UTC()
 	// sec, nsec := t.unix, uint64(t.nanoseconds)
 	// var data64 uint64
@@ -351,9 +350,7 @@ pub fn (mut e Encoder) write_f64(f f64) {
 }
 
 fn (mut e Encoder) write(b []u8) {
-	e.b.write(b) or {
-		panic('write error')
-	}
+	e.b.write(b) or { panic('write error') }
 }
 
 fn (mut e Encoder) write_u8(b ...u8) {
