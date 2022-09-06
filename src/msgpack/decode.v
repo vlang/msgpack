@@ -47,15 +47,15 @@ fn (mut d Decoder) decode_() ? {
 			// n.b = true
 			println('true')
 		}
-		mp_float {
+		mp_f32 {
 			// n.v = valueTypeFloat
 			// n.f = float64(math.Float32frombits(binary.big_endian_u32(d.d.decRd.readn4())))
-			println('float')
+			println('f32')
 		}
-		mp_double {
+		mp_f64 {
 			// n.v = valueTypeFloat
 			// n.f = math.Float64frombits(binary.big_endian_u64(d.d.decRd.readn8()))
-			println('double')
+			println('f64')
 		}
 		mp_u8 {
 			// n.v = valueTypeUint

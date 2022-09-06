@@ -86,7 +86,6 @@ pub fn (mut e Encoder) encode<T>(data T) {
 }
 
 pub fn (mut e Encoder) encode_bool(b bool) {
-	println('encode_bool: $b')
 	if b {
 		e.b.write_u8(mp_true)
 	} else {
@@ -94,6 +93,8 @@ pub fn (mut e Encoder) encode_bool(b bool) {
 	}
 }
 
+// NOTE: not currently used
+// encode using type just big enough to fit `i`
 fn (mut e Encoder) encode_int(i i64) {
 	if e.config.positive_int_unsigned && i >= 0 {
 		e.encode_uint(u64(i))
@@ -122,6 +123,8 @@ fn (mut e Encoder) encode_int(i i64) {
 	}
 }
 
+// NOTE: not currently used
+// encode using type just big enough to fit `i`
 fn (mut e Encoder) encode_uint(i u64) {
 	if i <= math.max_i8 {
 		if e.config.no_fixed_num {
@@ -180,12 +183,12 @@ pub fn (mut e Encoder) encode_u64(i u64) {
 }
 
 pub fn (mut e Encoder) encode_f32(f f32) {
-	e.write_u8(mp_float)
+	e.write_u8(mp_f32)
 	e.write_f32(f)
 }
 
 pub fn (mut e Encoder) encode_f64(f f64) {
-	e.write_u8(mp_double)
+	e.write_u8(mp_f64)
 	e.write_f64(f)
 }
 

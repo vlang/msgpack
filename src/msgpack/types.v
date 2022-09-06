@@ -20,8 +20,8 @@ const (
 	mp_i16             = u8(0xd1)
 	mp_i32             = u8(0xd2)
 	mp_i64             = u8(0xd3)
-	mp_float           = u8(0xca)
-	mp_double          = u8(0xcb)
+	mp_f32             = u8(0xca)
+	mp_f64             = u8(0xcb)
 
 	mp_fix_str_min     = u8(0xa0)
 	mp_fix_str_max     = u8(0xbf)
