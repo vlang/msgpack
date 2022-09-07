@@ -172,12 +172,10 @@ fn (mut d Decoder) decode_ext() ? {
 	// n.v = valueTypeExt
 	clen := d.read_ext_len()?
 	println('decode_ext - container len: $clen')
-	d.next()
 	if d.bd == mp_time_ext_type {
-		println('time')
 		// n.v = valueTypeTime
 		t := d.decode_time(clen)
-		println(t)
+		println('time: $t')
 	}
 	// TODO: d.d.bytes?
 	// else if d.d.bytes {
@@ -281,18 +279,23 @@ fn (mut d Decoder) read_array_start() ?int {
 fn (mut d Decoder) read_ext_len() ?int {
 	match d.bd {
 		mp_fix_ext_1 {
+			d.next()
 			return 1
 		}
 		mp_fix_ext_2 {
+			d.next()
 			return 2
 		}
 		mp_fix_ext_4 {
+			d.next()
 			return 4
 		}
 		mp_fix_ext_8 {
+			d.next()
 			return 8
 		}
 		mp_fix_ext_16 {
+			d.next()
 			return 16
 		}
 		mp_ext_8 {
