@@ -358,7 +358,7 @@ fn (mut e Encoder) write(b []u8) {
 	e.b.write(b) or { panic('write error') }
 }
 
-// write on or more bytes
+// write one or more bytes
 fn (mut e Encoder) write_u8(b ...u8) {
 	if b.len > 1 {
 		e.write(b)
