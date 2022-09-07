@@ -93,7 +93,7 @@ pub fn (mut e Encoder) encode_bool(b bool) {
 	}
 }
 
-// NOTE: not currently used
+// NOTE: not used internally (using encode_ix)
 // encode using type just big enough to fit `i`
 fn (mut e Encoder) encode_int(i i64) {
 	if e.config.positive_int_unsigned && i >= 0 {
@@ -123,7 +123,7 @@ fn (mut e Encoder) encode_int(i i64) {
 	}
 }
 
-// NOTE: not currently used
+// NOTE: not used internally (using encode_ux)
 // encode using type just big enough to fit `i`
 fn (mut e Encoder) encode_uint(i u64) {
 	if i <= math.max_i8 {
@@ -158,7 +158,6 @@ pub fn (mut e Encoder) encode_i32(i int) {
 }
 
 pub fn (mut e Encoder) encode_i64(i i64) {
-	println('encode_i64:')
 	e.write_u8(mp_i64)
 	e.write_u64(u64(i))
 }
@@ -192,15 +191,11 @@ pub fn (mut e Encoder) encode_f64(f f64) {
 	e.write_f64(f)
 }
 
-pub fn (mut e Encoder) encode_map(s string) {
-}
-
 pub fn (mut e Encoder) encode_nil() {
 	e.write_u8(mp_nil)
 }
 
 pub fn (mut e Encoder) encode_string(s string) {
-	// println('encode_string: $s')
 	ct := match e.config.write_ext {
 		true {
 			match e.config.string_raw {
@@ -218,6 +213,7 @@ pub fn (mut e Encoder) encode_string(s string) {
 	}
 }
 
+// NOTE: will be used for encoding extensions as raw
 pub fn (mut e Encoder) encode_string_bytes_raw(bs []byte) {
 	// TODO ?
 	// if bs == nil {
@@ -275,6 +271,11 @@ pub fn (mut e Encoder) encode_time(t time.Time) {
 	//	e.write_u32(u32(nsec))
 	//	e.write_u64(u64(sec))
 	// }
+}
+
+// TODO: custom extension support
+fn (mut e Encoder) encode_ext() {
+	panic('not implemented')
 }
 
 fn (mut e Encoder) encode_raw_ext(re &RawExt) {
@@ -352,10 +353,12 @@ pub fn (mut e Encoder) write_f64(f f64) {
 	e.write(put_u64(math.f64_bits(f)))
 }
 
+// write byte array
 fn (mut e Encoder) write(b []u8) {
 	e.b.write(b) or { panic('write error') }
 }
 
+// write on or more bytes
 fn (mut e Encoder) write_u8(b ...u8) {
 	if b.len > 1 {
 		e.write(b)
