@@ -24,10 +24,14 @@ pub fn (mut d Decoder) decode_from_string(data string) ? {
 	d.decode(hex.decode(data) or { panic('error decoding hex string') })?
 }
 
+// TODO: proper decoding into data structures
+// for now just get decoding of all types working.
 pub fn (mut d Decoder) decode(data []u8) ? {
 	d.buffer = data
-	d.next()
-	d.decode_()?
+	for d.pos < d.buffer.len {
+		d.next()
+		d.decode_()?
+	}
 }
 
 fn (mut d Decoder) decode_() ? {
@@ -91,7 +95,7 @@ fn (mut d Decoder) decode_() ? {
 			// n.v = valueTypeInt
 			// n.i = i64(int32(binary.big_endian_u32(d.d.decRd.readn4())))
 			i := i64(int(binary.big_endian_u32(d.read_n(4))))
-			d.next()
+			// d.next()
 			println('int: $i')
 		}
 		mp_i64 {
@@ -100,23 +104,23 @@ fn (mut d Decoder) decode_() ? {
 			println('i64')
 		}
 		else {
-			println('else: $d.bd')
+			// println('else: $d.bd')
 			if d.bd in [mp_bin_8, mp_bin_16, mp_bin_32] {
 				println('bin')
 			} else if d.bd in [mp_str_8, mp_str_16, mp_str_32]
 				|| (d.bd >= mp_fix_str_min && d.bd <= mp_fix_str_max) {
-				println('string')
+				// println('string')
 				d.decode_string()?
 			} else if d.bd in [mp_array_16, mp_array_32]
 				|| (d.bd >= mp_fix_array_min && d.bd <= mp_fix_array_max) {
 				println('array')
 			} else if d.bd in [mp_map_16, mp_map_32]
 				|| (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
-				println('map')
+				// println('map')
 				d.decode_map()?
 			} else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16)
 				|| (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
-				println('ext')
+				d.decode_ext()?
 			}
 		}
 	}
@@ -147,7 +151,7 @@ fn (mut d Decoder) decode_() ? {
 	// 		bd == mp_map_16, bd == mp_map_32, bd >= mp_fix_map_min && bd <= mp_fix_map_max:
 	// 		n.v = .map_
 	// 		decodeFurther = true
-	// 		bd >= mpFixExt1 && bd <= mpFixExt16, bd >= mpExt8 && bd <= mpExt32:
+	// 		bd >= mp_fix_ext_1 && bd <= mp_fix_ext_16, bd >= mp_ext_8 && bd <= mp_ext_32:
 	// 		n.v = valueTypeExt
 	// 		clen := d.readExtLen()
 	// 		n.u = u64(d.d.decRd.readn1())
@@ -162,6 +166,26 @@ fn (mut d Decoder) decode_() ? {
 	// 	default:
 	// 		d.d.errorf("cannot infer value: %s: Ox%x/%d/%s", msg_bad_desc, bd, bd, mpdesc(bd))
 	// 	}
+}
+
+fn (mut d Decoder) decode_ext() ? {
+	// n.v = valueTypeExt
+	clen := d.read_ext_len()?
+	println('decode_ext - container len: $clen')
+	d.next()
+	if d.bd == mp_time_ext_type {
+		println('time')
+		// n.v = valueTypeTime
+		t := d.decode_time(clen)
+		println(t)
+	}
+	// TODO: d.d.bytes?
+	// else if d.d.bytes {
+	// n.l = d.d.decRd.rb.readx(uint(clen))
+	// }
+	else {
+		// n.l = decByteSlice(d.d.r(), clen, d.d.h.MaxInitLen, d.d.b[:])
+	}
 }
 
 fn (mut d Decoder) decode_string() ? {
@@ -254,29 +278,37 @@ fn (mut d Decoder) read_array_start() ?int {
 	return d.read_container_len(msgpack_container_list)
 }
 
-// func (d *msgpackDecDriver) readExtLen() (clen int) {
-// 	switch d.bd {
-// 	case mpFixExt1:
-// 		clen = 1
-// 	case mpFixExt2:
-// 		clen = 2
-// 	case mpFixExt4:
-// 		clen = 4
-// 	case mpFixExt8:
-// 		clen = 8
-// 	case mpFixExt16:
-// 		clen = 16
-// 	case mpExt8:
-// 		clen = int(d.d.decRd.readn1())
-// 	case mpExt16:
-// 		clen = int(binary.big_endian_u16(d.d.decRd.readn2()))
-// 	case mpExt32:
-// 		clen = int(binary.big_endian_u32(d.d.decRd.readn4()))
-// 	default:
-// 		d.d.errorf("decoding ext bytes: found unexpected byte: %x", d.bd)
-// 	}
-// 	return
-// }
+fn (mut d Decoder) read_ext_len() ?int {
+	match d.bd {
+		mp_fix_ext_1 {
+			return 1
+		}
+		mp_fix_ext_2 {
+			return 2
+		}
+		mp_fix_ext_4 {
+			return 4
+		}
+		mp_fix_ext_8 {
+			return 8
+		}
+		mp_fix_ext_16 {
+			return 16
+		}
+		mp_ext_8 {
+			return int(d.read_1())
+		}
+		mp_ext_16 {
+			return int(binary.big_endian_u16(d.read_n(2)))
+		}
+		mp_ext_32 {
+			return int(binary.big_endian_u32(d.read_n(4)))
+		}
+		else {
+			return error('decoding ext bytes: found unexpected byte: $d.bd.hex()')
+		}
+	}
+}
 
 // func (d *msgpackDecDriver) DecodeTime() (t time.Time) {
 // 	// decode time from string bytes or ext
@@ -291,20 +323,40 @@ fn (mut d Decoder) read_array_start() ?int {
 // 		(bd >= mp_fix_str_min && bd <= mp_fix_str_max) {
 // 		clen = d.read_container_len(msgpackContainerStr) // string/raw
 // 	} else {
-// 		// expect to see mpFixExt4,-1 OR mpFixExt8,-1 OR mpExt8,12,-1
+// 		// expect to see mp_fix_ext_4,-1 OR mp_fix_ext_8,-1 OR mp_ext_8,12,-1
 // 		d.bdRead = false
 // 		b2 := d.d.decRd.readn1()
-// 		if d.bd == mpFixExt4 && b2 == mpTimeExtTagU {
+// 		if d.bd == mp_fix_ext_4 && b2 == mpTimeExtTagU {
 // 			clen = 4
-// 		} else if d.bd == mpFixExt8 && b2 == mpTimeExtTagU {
+// 		} else if d.bd == mp_fix_ext_8 && b2 == mpTimeExtTagU {
 // 			clen = 8
-// 		} else if d.bd == mpExt8 && b2 == 12 && d.d.decRd.readn1() == mpTimeExtTagU {
+// 		} else if d.bd == mp_ext_8 && b2 == 12 && d.d.decRd.readn1() == mpTimeExtTagU {
 // 			clen = 12
 // 		} else {
 // 			d.d.errorf("invalid stream for decoding time as extension: got 0x%x, 0x%x", d.bd, b2)
 // 		}
 // 	}
 // 	return d.decodeTime(clen)
+// }
+
+// fn (mut d Decoder) decode_ext(rv interface{}, basetype reflect.Type, xtag uint64, ext Ext) {
+// 	if xtag > 0xff {
+// 		d.d.errorf("ext: tag must be <= 0xff; got: %v", xtag)
+// 	}
+// 	if d.advanceNil() {
+// 		return
+// 	}
+// 	xbs, realxtag1, zerocopy := d.decodeExtV(ext != nil, uint8(xtag))
+// 	realxtag := u64(realxtag1)
+// 	if ext == nil {
+// 		re := rv.(*RawExt)
+// 		re.Tag = realxtag
+// 		re.setData(xbs, zerocopy)
+// 	} else if ext == SelfExt {
+// 		d.d.sideDecode(rv, basetype, xbs)
+// 	} else {
+// 		ext.ReadExt(rv, xbs)
+// 	}
 // }
 
 fn (mut d Decoder) decode_time(clen int) time.Time {
@@ -339,41 +391,19 @@ fn (mut d Decoder) decode_time(clen int) time.Time {
 	// }
 }
 
-// func (d *msgpackDecDriver) DecodeExt(rv interface{}, basetype reflect.Type, xtag uint64, ext Ext) {
-// 	if xtag > 0xff {
-// 		d.d.errorf("ext: tag must be <= 0xff; got: %v", xtag)
-// 	}
-// 	if d.advanceNil() {
-// 		return
-// 	}
-// 	xbs, realxtag1, zerocopy := d.decodeExtV(ext != nil, uint8(xtag))
-// 	realxtag := u64(realxtag1)
-// 	if ext == nil {
-// 		re := rv.(*RawExt)
-// 		re.Tag = realxtag
-// 		re.setData(xbs, zerocopy)
-// 	} else if ext == SelfExt {
-// 		d.d.sideDecode(rv, basetype, xbs)
-// 	} else {
-// 		ext.ReadExt(rv, xbs)
-// 	}
-// }
-
 pub fn (mut d Decoder) next() {
 	d.bd = d.buffer[d.pos]
 	d.pos++
 }
 
 fn (mut d Decoder) read_1() u8 {
-	b := d.buffer[d.pos]
-	d.pos++
 	d.next()
-	return b
+	return d.buffer[d.pos]
 }
 
 fn (mut d Decoder) read_n(len int) []u8 {
 	b := d.buffer[d.pos..d.pos + len]
-	d.pos += len
+	d.pos += len - 1
 	d.next()
 	return b
 }
