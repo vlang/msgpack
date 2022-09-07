@@ -4,10 +4,12 @@ import msgpack
 import time
 
 struct TestStructA {
-	field_a int         [codec: 'codecdata1']
-	field_b string      [codec: 'codecdata2']
+	field_a int            [codec: 'codecdata1']
+	field_b string         [codec: 'codecdata2']
 	field_c TestStructB
-	field_d time.Time
+	field_d []string
+	field_e map[string]int
+	field_f time.Time
 }
 
 struct TestStructB {
@@ -24,14 +26,21 @@ fn main() {
 			field_a: 222
 			field_b: 'TestStructB.field_b'
 		}
-		field_d: time.now()
+		field_d: ['apple', 'banana', 'coconut', 'durian']
+		field_e: {
+			'one':   1
+			'two':   2
+			'three': 3
+			'four':  4
+		}
+		field_f: time.now()
 	}
 	_ = ts
 	encoder.encode<TestStructA>(ts)
 	// encoder.encode<int>(111)
 	// encoder.encode('msgpack vlang')
 	// encoder.encode({'a': 1, 'b': 2, 'c': 3, 'd': 4})
-	// encoder.encode(['apple', 'bananna'])
+	// encoder.encode(['apple', 'banana'])
 	println(encoder)
 
 	mut decoder := msgpack.new_decoder()

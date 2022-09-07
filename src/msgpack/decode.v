@@ -116,7 +116,6 @@ fn (mut d Decoder) decode_() ? {
 				println('array')
 			} else if d.bd in [mp_map_16, mp_map_32]
 				|| (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
-				// println('map')
 				d.decode_map()?
 			} else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16)
 				|| (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
