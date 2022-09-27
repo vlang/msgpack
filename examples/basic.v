@@ -3,22 +3,23 @@ module main
 import msgpack
 import time
 
-struct TestStructA {
+pub struct TestStructA {
 	field_a int            [codec: 'codecdata1']
 	field_b string         [codec: 'codecdata2']
 	field_c TestStructB
 	field_d []string
-	field_e map[string]int
-	field_f time.Time
+	// field_e map[string]int
+	// field_f map[string]TestStructB
+	// field_g []TestStructB
+	field_h time.Time
 }
 
-struct TestStructB {
+pub struct TestStructB {
 	field_a int    [codec: 'codecdata1']
 	field_b string [codec: 'codecdata2']
 }
 
 fn main() {
-	mut encoder := msgpack.new_encoder()
 	ts := TestStructA{
 		field_a: 111
 		field_b: 'TestStructA.field_b'
@@ -27,21 +28,44 @@ fn main() {
 			field_b: 'TestStructB.field_b'
 		}
 		field_d: ['apple', 'banana', 'coconut', 'durian']
-		field_e: {
-			'one':   1
-			'two':   2
-			'three': 3
-			'four':  4
-		}
-		field_f: time.now()
+		// field_e: {
+		// 	'one':   1
+		// 	'two':   2
+		// 	'three': 3
+		// 	'four':  4
+		// }
+		// field_f: {
+		// 	'a': TestStructB{
+		// 		field_a: 1
+		// 		field_b: 'field_f.a.TestStructB.field_b'
+		// 	},
+		// 	'b': TestStructB{
+		// 		field_a: 2
+		// 		field_b: 'field_f.b.TestStructB.field_b'
+		// 	}
+		// }
+		// field_g: [
+		// 	TestStructB{
+		// 		field_a: 1
+		// 		field_b: 'field_g.b.TestStructB.field_b'
+		// 	},
+		// 	TestStructB{
+		// 		field_a: 2
+		// 		field_b: 'field_g.b.TestStructB.field_b'
+		// 	}
+		// ]
+		field_h: time.now()
 	}
 	_ = ts
-	encoder.encode<TestStructA>(ts)
-	// encoder.encode<int>(111)
-	// encoder.encode('msgpack vlang')
-	// encoder.encode({'a': 1, 'b': 2, 'c': 3, 'd': 4})
-	// encoder.encode(['apple', 'banana'])
-	println(encoder)
+	// mut encoder := msgpack.new_encoder()
+	// encoded := encoder.encode<TestStructA>(ts)
+	
+	encoded := msgpack.encode<TestStructA>(ts)
+	// encoded := msgpack.encode<int>(111)
+	// encoded := msgpack.encode('msgpack vlang')
+	// encoded := msgpack.encode({'a': 1, 'b': 2, 'c': 3, 'd': 4})
+	// encoded := msgpack.encode(['apple', 'banana'])
+	println(encoded.hex())
 
 	mut decoder := msgpack.new_decoder()
 	// decoder.decode(encoder.b)

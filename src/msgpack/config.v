@@ -16,7 +16,7 @@ struct Config {
 	//    configured extensions are serialized as raw bytes (not msgpack extensions).
 	//    reserved byte descriptors like Str8 and those enabling the new msgpack Binary type
 	//    are not encoded.
-	write_ext bool
+	write_ext bool = true
 	// positive_int_unsigned says to encode positive integers as unsigned.
 	positive_int_unsigned bool
 	// string_to_raw controls how strings are encoded.

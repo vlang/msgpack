@@ -14,16 +14,29 @@ pub fn new_encoder() Encoder {
 	return Encoder{}
 }
 
+pub fn encode<T>(data T) []u8 {
+	mut encoder := new_encoder()
+	return encoder.encode(data)
+}
+
 pub fn (e &Encoder) str() string {
 	return e.b.hex()
 }
 
-pub fn (mut e Encoder) encode<T>(data T) {
+pub fn (e &Encoder) bytes() []u8 {
+	return e.b
+}
+
+pub fn (mut e Encoder) encode<T>(data T) []u8 {
 	$if T.typ is string {
 		e.encode_string(data)
 	} $else $if T.typ is bool {
 		e.encode_bool(data)
-	} $else $if T.typ is i8 {
+	}
+	// TODO: if int encode_int, if uint encode_uint
+	// instead of needing to check each type, also
+	// then we will be using the smallest storage
+	$else $if T.typ is i8 {
 		e.encode_i8(data)
 	} $else $if T.typ is i16 {
 		e.encode_i16(data)
@@ -45,6 +58,8 @@ pub fn (mut e Encoder) encode<T>(data T) {
 		e.encode_f64(data)
 	} $else $if T.typ is time.Time {
 		e.encode_time(data)
+	} $else $if T.typ is []u8 {
+		e.encode_string_bytes_raw(data)
 	} $else $if T is $Array {
 		e.write_array_start(data.len)
 		for value in data {
@@ -62,27 +77,33 @@ pub fn (mut e Encoder) encode<T>(data T) {
 		$for _ in T.fields {
 			fields_len++
 		}
+		// TODO: embedded fields
 		if fields_len > 0 {
-			e.write_map_start(1)
-			e.encode_string(T.name)
+			// e.write_map_start(1)
+			// e.encode_string(T.name)
 			e.write_map_start(fields_len)
 		}
 		$for field in T.fields {
 			mut codec_attr := ''
 			for attr in field.attrs {
 				if attr.starts_with('codec:') {
-					codec_attr = attr.all_after(':').trim_space()
+					codec_attr = attr.all_after('codec:').trim_space()
 					break
 				}
 			}
-			_ = codec_attr
-			e.encode_string(field.name)
+			// TODO: omit empty arrays or fields
+			if codec_attr.len > 0 {
+				e.encode_string(codec_attr)
+			} else {
+				e.encode_string(field.name)
+			}
 			e.encode(data.$(field.name))
 			// FIXME: current fix in compiler is messed up.
 			// concrete_types are not set correctly (something strange)
 			// e.encode('sss')
 		}
 	}
+	return e.b
 }
 
 pub fn (mut e Encoder) encode_bool(b bool) {
@@ -95,7 +116,7 @@ pub fn (mut e Encoder) encode_bool(b bool) {
 
 // NOTE: not used internally (using encode_ix)
 // encode using type just big enough to fit `i`
-fn (mut e Encoder) encode_int(i i64) {
+pub fn (mut e Encoder) encode_int(i i64) {
 	if e.config.positive_int_unsigned && i >= 0 {
 		e.encode_uint(u64(i))
 	} else if i > math.max_i8 {
@@ -125,7 +146,7 @@ fn (mut e Encoder) encode_int(i i64) {
 
 // NOTE: not used internally (using encode_ux)
 // encode using type just big enough to fit `i`
-fn (mut e Encoder) encode_uint(i u64) {
+pub fn (mut e Encoder) encode_uint(i u64) {
 	if i <= math.max_i8 {
 		if e.config.no_fixed_num {
 			e.encode_u8(u8(i))
@@ -214,8 +235,8 @@ pub fn (mut e Encoder) encode_string(s string) {
 }
 
 // NOTE: will be used for encoding extensions as raw
-pub fn (mut e Encoder) encode_string_bytes_raw(bs []byte) {
-	// TODO ?
+pub fn (mut e Encoder) encode_string_bytes_raw(bs []u8) {
+	// TODO: check spec if we need nil for zero length array
 	// if bs == nil {
 	// 	e.encode_nil()
 	// 	return
@@ -321,11 +342,11 @@ fn (mut e Encoder) write_container_len(ct MsgpackContainerType, l int) {
 	}
 }
 
-fn (mut e Encoder) write_array_start(length int) {
+pub fn (mut e Encoder) write_array_start(length int) {
 	e.write_container_len(msgpack_container_list, length)
 }
 
-fn (mut e Encoder) write_map_start(length int) {
+pub fn (mut e Encoder) write_map_start(length int) {
 	e.write_container_len(msgpack_container_map, length)
 }
 

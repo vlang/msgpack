@@ -20,6 +20,10 @@ pub fn new_decoder() Decoder {
 	return Decoder{}
 }
 
+pub fn decode<T>(src []u8) ?T {
+	return T{}
+}
+
 pub fn (mut d Decoder) decode_from_string(data string) ? {
 	d.decode(hex.decode(data) or { panic('error decoding hex string') })?
 }
