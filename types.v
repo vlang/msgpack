@@ -24,13 +24,13 @@ const (
 	mp_true            = u8(0xc3)
 	// byte array whose length is up to:
 	mp_bin_8           = u8(0xc4) //  (2^8)-1 bytes
-	mp_bin_16          = u8(0xc5) // (2^16)-1 bytes
-	mp_bin_32          = u8(0xc6) // (2^32)-1 bytes
+	mp_bin_16          = u8(0xc5) // (2^16)-1 bytes (big-endian)
+	mp_bin_32          = u8(0xc6) // (2^32)-1 bytes (big-endian)
 	// integer and a byte array whose length is up to:
 	mp_ext_8           = u8(0xc7) //  (2^8)-1 bytes
-	mp_ext_16          = u8(0xc8) // (2^16)-1 bytes
-	mp_ext_32          = u8(0xc9) // (2^32)-1 bytes
-	// single|double precision floating point number (IEEE 754, big-endian)
+	mp_ext_16          = u8(0xc8) // (2^16)-1 bytes (big-endian)
+	mp_ext_32          = u8(0xc9) // (2^32)-1 bytes (big-endian)
+	// single|double precision floating point number (big-endian, IEEE 754)
 	mp_f32             = u8(0xca)
 	mp_f64             = u8(0xcb)
 	// 8-bit unsigned integer
@@ -53,12 +53,12 @@ const (
 	mp_fix_ext_16      = u8(0xd8) // 16 bytes
 	// byte array whose length is up to:
 	mp_str_8           = u8(0xd9) //  (2^8)-1 bytes
-	mp_str_16          = u8(0xda) // (2^16)-1 bytes
-	mp_str_32          = u8(0xdb) // (2^32)-1 bytes
-	// array whose length is up to:
+	mp_str_16          = u8(0xda) // (2^16)-1 bytes (big-endian)
+	mp_str_32          = u8(0xdb) // (2^32)-1 bytes (big-endian)
+	// array whose length is up to (big-endian):
 	mp_array_16        = u8(0xdc) // (2^16)-1 elements
 	mp_array_32        = u8(0xdd) // (2^32)-1 elements
-	// map whose length is up to:
+	// map whose length is up to (big-endian):
 	mp_map_16          = u8(0xde) // (2^16)-1 elements
 	mp_map_32          = u8(0xdf) // (2^32)-1 elements
 	// 5-bit negative integer
