@@ -2,55 +2,68 @@ module msgpack
 
 import math
 
+// Spec: https://github.com/msgpack/msgpack/blob/master/spec.md
 const (
-	mp_nil             = u8(0xc0)
-	// _               = u8(0xc1) // never used
-	mp_false           = u8(0xc2)
-	mp_true            = u8(0xc3)
-
+	// 7-bit positive integer
 	mp_pos_fix_int_min = u8(0x00)
 	mp_pos_fix_int_max = u8(0x7f)
-	mp_neg_fix_int_min = u8(0xe0)
-	mp_neg_fix_int_max = u8(0xff)
+	// map whose length is up to 15 elements
+	mp_fix_map_min     = u8(0x80)
+	mp_fix_map_max     = u8(0x8f)
+	// array whose length is up to 15 elements
+	mp_fix_array_min   = u8(0x90)
+	mp_fix_array_max   = u8(0x9f)
+	// byte array whose length is up to 31 bytes
+	mp_fix_str_min     = u8(0xa0)
+	mp_fix_str_max     = u8(0xbf)
+	// nil
+	mp_nil             = u8(0xc0)
+	// _               = u8(0xc1) // never used
+	// booleans
+	mp_false           = u8(0xc2)
+	mp_true            = u8(0xc3)
+	// byte array whose length is up to:
+	mp_bin_8           = u8(0xc4) //  (2^8)-1 bytes
+	mp_bin_16          = u8(0xc5) // (2^16)-1 bytes
+	mp_bin_32          = u8(0xc6) // (2^32)-1 bytes
+	// integer and a byte array whose length is up to:
+	mp_ext_8           = u8(0xc7) //  (2^8)-1 bytes
+	mp_ext_16          = u8(0xc8) // (2^16)-1 bytes
+	mp_ext_32          = u8(0xc9) // (2^32)-1 bytes
+	// single|double precision floating point number (IEEE 754, big-endian)
+	mp_f32             = u8(0xca)
+	mp_f64             = u8(0xcb)
+	// 8-bit unsigned integer
 	mp_u8              = u8(0xcc)
+	// 16|32|64-bit unsigned integer (big-endian)
 	mp_u16             = u8(0xcd)
 	mp_u32             = u8(0xce)
 	mp_u64             = u8(0xcf)
+	// 8-bit signed integer
 	mp_i8              = u8(0xd0)
+	// 16|32|64-bit signed integer (big-endian)
 	mp_i16             = u8(0xd1)
 	mp_i32             = u8(0xd2)
 	mp_i64             = u8(0xd3)
-	mp_f32             = u8(0xca)
-	mp_f64             = u8(0xcb)
-
-	mp_fix_str_min     = u8(0xa0)
-	mp_fix_str_max     = u8(0xbf)
-	mp_str_8           = u8(0xd9)
-	mp_str_16          = u8(0xda)
-	mp_str_32          = u8(0xdb)
-
-	mp_fix_array_min   = u8(0x90)
-	mp_fix_array_max   = u8(0x9f)
-	mp_array_16        = u8(0xdc)
-	mp_array_32        = u8(0xdd)
-
-	mp_fix_map_min     = u8(0x80)
-	mp_fix_map_max     = u8(0x8f)
-	mp_map_16          = u8(0xde)
-	mp_map_32          = u8(0xdf)
-
-	mp_bin_8           = u8(0xc4)
-	mp_bin_16          = u8(0xc5)
-	mp_bin_32          = u8(0xc6)
-
-	mp_fix_ext_1       = u8(0xd4)
-	mp_fix_ext_2       = u8(0xd5)
-	mp_fix_ext_4       = u8(0xd6)
-	mp_fix_ext_8       = u8(0xd7)
-	mp_fix_ext_16      = u8(0xd8)
-	mp_ext_8           = u8(0xc7)
-	mp_ext_16          = u8(0xc8)
-	mp_ext_32          = u8(0xc9)
+	// integer and a byte array whose length is:
+	mp_fix_ext_1       = u8(0xd4) //  1 byte
+	mp_fix_ext_2       = u8(0xd5) //  2 bytes
+	mp_fix_ext_4       = u8(0xd6) //  4 bytes
+	mp_fix_ext_8       = u8(0xd7) //  8 bytes
+	mp_fix_ext_16      = u8(0xd8) // 16 bytes
+	// byte array whose length is up to:
+	mp_str_8           = u8(0xd9) //  (2^8)-1 bytes
+	mp_str_16          = u8(0xda) // (2^16)-1 bytes
+	mp_str_32          = u8(0xdb) // (2^32)-1 bytes
+	// array whose length is up to:
+	mp_array_16        = u8(0xdc) // (2^16)-1 elements
+	mp_array_32        = u8(0xdd) // (2^32)-1 elements
+	// map whose length is up to:
+	mp_map_16          = u8(0xde) // (2^16)-1 elements
+	mp_map_32          = u8(0xdf) // (2^32)-1 elements
+	// 5-bit negative integer
+	mp_neg_fix_int_min = u8(0xe0)
+	mp_neg_fix_int_max = u8(0xff)
 )
 
 const (
