@@ -33,18 +33,16 @@ const (
 	// single|double precision floating point number (big-endian, IEEE 754)
 	mp_f32             = u8(0xca)
 	mp_f64             = u8(0xcb)
-	// 8-bit unsigned integer
+	// 8|16|32|64-bit unsigned integer
 	mp_u8              = u8(0xcc)
-	// 16|32|64-bit unsigned integer (big-endian)
-	mp_u16             = u8(0xcd)
-	mp_u32             = u8(0xce)
-	mp_u64             = u8(0xcf)
-	// 8-bit signed integer
+	mp_u16             = u8(0xcd) // (big-endian)
+	mp_u32             = u8(0xce) // (big-endian)
+	mp_u64             = u8(0xcf) // (big-endian)
+	// 8|16|32|64-bit signed integer
 	mp_i8              = u8(0xd0)
-	// 16|32|64-bit signed integer (big-endian)
-	mp_i16             = u8(0xd1)
-	mp_i32             = u8(0xd2)
-	mp_i64             = u8(0xd3)
+	mp_i16             = u8(0xd1) // (big-endian)
+	mp_i32             = u8(0xd2) // (big-endian)
+	mp_i64             = u8(0xd3) // (big-endian)
 	// integer and a byte array whose length is:
 	mp_fix_ext_1       = u8(0xd4) //  1 byte
 	mp_fix_ext_2       = u8(0xd5) //  2 bytes
