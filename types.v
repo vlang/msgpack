@@ -64,19 +64,21 @@ const (
 	mp_neg_fix_int_max = u8(0xff)
 )
 
+// Applications can assign 0 to 127 to store application-specific type information.
+// MessagePack reserves -1 to -128 for future extension to add predefined types.
 const (
+	// Timestamp
 	mp_time_ext_type = u8(-1)
 )
 
 const (
-	// containerLenUnknown is length returned from Read(Map|Array)Len
-	// when a format doesn't know apiori.
+	// container_len_unknown is length returned from read_(map|array)_len
+	// when a format doesn't prefix the length.
 	// For example, json doesn't pre-determine the length of a container (sequence/map).
-	container_len_unknown = -1
-
-	// containerLenNil is length returned from Read(Map|Array)Len
+	// container_len_unknown = -1
+	// container_len_nil is length returned from read_(map|array)_len
 	// when a 'nil' was encountered in the stream.
-	container_len_nil     = math.min_i32
+	container_len_nil = math.min_i32
 )
 
 struct RawExt {
@@ -91,21 +93,20 @@ struct RawExt {
 }
 
 // A MsgpackContainer type specifies the different types of msgpackContainers.
-struct MsgpackContainerType {
+struct ContainerType {
 	fix_cutoff u8
 	b_fix_min  u8
 	b8         u8
 	b16        u8
 	b32        u8
-	// hasFixMin, has8, has8Always bool
 }
 
 const (
-	msgpack_container_raw_legacy = MsgpackContainerType{32, mp_fix_str_min, 0, mp_str_16, mp_str_32}
-	msgpack_container_str        = MsgpackContainerType{32, mp_fix_str_min, mp_str_8, mp_str_16, mp_str_32}
-	msgpack_container_bin        = MsgpackContainerType{0, 0, mp_bin_8, mp_bin_16, mp_bin_32}
-	msgpack_container_list       = MsgpackContainerType{16, mp_fix_array_min, 0, mp_array_16, mp_array_32}
-	msgpack_container_map        = MsgpackContainerType{16, mp_fix_map_min, 0, mp_map_16, mp_map_32}
+	container_raw_legacy = ContainerType{32, mp_fix_str_min, 0, mp_str_16, mp_str_32}
+	container_str        = ContainerType{32, mp_fix_str_min, mp_str_8, mp_str_16, mp_str_32}
+	container_bin        = ContainerType{0, 0, mp_bin_8, mp_bin_16, mp_bin_32}
+	container_array      = ContainerType{16, mp_fix_array_min, 0, mp_array_16, mp_array_32}
+	container_map        = ContainerType{16, mp_fix_map_min, 0, mp_map_16, mp_map_32}
 )
 
 // valueType is the stream type
@@ -125,19 +126,3 @@ enum ValueType {
 	ext
 	// valueTypeInvalid
 }
-
-// var valueTypeStrings = [...]string{
-// 	"Unset",
-// 	"Nil",
-// 	"Int",
-// 	"Uint",
-// 	"Float",
-// 	"Bool",
-// 	"String",
-// 	"Symbol",
-// 	"Bytes",
-// 	"Map",
-// 	"Array",
-// 	"Timestamp",
-// 	"Ext",
-// }

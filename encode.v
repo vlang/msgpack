@@ -6,7 +6,7 @@ import time
 
 struct Encoder {
 mut:
-	b      strings.Builder = strings.new_builder(1000)
+	buffer strings.Builder = strings.new_builder(1024)
 	config Config = default_config()
 }
 
@@ -20,11 +20,11 @@ pub fn encode<T>(data T) []u8 {
 }
 
 pub fn (e &Encoder) str() string {
-	return e.b.hex()
+	return e.buffer.hex()
 }
 
 pub fn (e &Encoder) bytes() []u8 {
-	return e.b
+	return e.buffer
 }
 
 pub fn (mut e Encoder) encode<T>(data T) []u8 {
@@ -98,23 +98,19 @@ pub fn (mut e Encoder) encode<T>(data T) []u8 {
 				e.encode_string(field.name)
 			}
 			e.encode(data.$(field.name))
-			// FIXME: current fix in compiler is messed up.
-			// concrete_types are not set correctly (something strange)
-			// e.encode('sss')
 		}
 	}
-	return e.b
+	return e.buffer
 }
 
 pub fn (mut e Encoder) encode_bool(b bool) {
 	if b {
-		e.b.write_u8(mp_true)
+		e.buffer.write_u8(mp_true)
 	} else {
-		e.b.write_u8(mp_false)
+		e.buffer.write_u8(mp_false)
 	}
 }
 
-// NOTE: not used internally (using encode_ix)
 // encode using type just big enough to fit `i`
 pub fn (mut e Encoder) encode_int(i i64) {
 	if e.config.positive_int_unsigned && i >= 0 {
@@ -144,7 +140,6 @@ pub fn (mut e Encoder) encode_int(i i64) {
 	}
 }
 
-// NOTE: not used internally (using encode_ux)
 // encode using type just big enough to fit `i`
 pub fn (mut e Encoder) encode_uint(i u64) {
 	if i <= math.max_i8 {
@@ -220,12 +215,12 @@ pub fn (mut e Encoder) encode_string(s string) {
 	ct := match e.config.write_ext {
 		true {
 			match e.config.string_raw {
-				true { msgpack_container_bin }
-				else { msgpack_container_str }
+				true { container_bin }
+				else { container_str }
 			}
 		}
 		else {
-			msgpack_container_raw_legacy
+			container_raw_legacy
 		}
 	}
 	e.write_container_len(ct, s.len)
@@ -234,7 +229,6 @@ pub fn (mut e Encoder) encode_string(s string) {
 	}
 }
 
-// NOTE: will be used for encoding extensions as raw
 pub fn (mut e Encoder) encode_string_bytes_raw(bs []u8) {
 	// TODO: check spec if we need nil for zero length array
 	// if bs == nil {
@@ -242,9 +236,9 @@ pub fn (mut e Encoder) encode_string_bytes_raw(bs []u8) {
 	// 	return
 	// }
 	if e.config.write_ext {
-		e.write_container_len(msgpack_container_bin, bs.len)
+		e.write_container_len(container_bin, bs.len)
 	} else {
-		e.write_container_len(msgpack_container_raw_legacy, bs.len)
+		e.write_container_len(container_raw_legacy, bs.len)
 	}
 	if bs.len > 0 {
 		e.write(bs)
@@ -260,7 +254,7 @@ pub fn (mut e Encoder) encode_time(t time.Time) {
 	if e.config.write_ext {
 		e.encode_ext_preamble(mp_time_ext_type, 4)
 	} else {
-		e.write_container_len(msgpack_container_raw_legacy, 4)
+		e.write_container_len(container_raw_legacy, 4)
 	}
 	e.write_u32(u32(t.unix))
 	// NOTE: automatically use the best storage depending if we need nanosecond
@@ -281,7 +275,7 @@ pub fn (mut e Encoder) encode_time(t time.Time) {
 	// if e.config.write_ext {
 	// 	e.encode_ext_preamble(mp_time_ext_type, l)
 	// } else {
-	// 	e.write_container_len(msgpack_container_raw_legacy, l)
+	// 	e.write_container_len(container_raw_legacy, l)
 	// }
 	// switch l {
 	// 	4:
@@ -304,54 +298,54 @@ fn (mut e Encoder) encode_raw_ext(re &RawExt) {
 	e.write(re.data)
 }
 
-fn (mut e Encoder) encode_ext_preamble(xtag u8, l int) {
-	if l == 1 {
-		e.write_u8(mp_fix_ext_1, xtag)
-	} else if l == 2 {
-		e.write_u8(mp_fix_ext_2, xtag)
-	} else if l == 4 {
-		e.write_u8(mp_fix_ext_4, xtag)
-	} else if l == 8 {
-		e.write_u8(mp_fix_ext_8, xtag)
-	} else if l == 16 {
-		e.write_u8(mp_fix_ext_16, xtag)
-	} else if l < 256 {
-		e.write_u8(mp_ext_8, u8(l), xtag)
-	} else if l < 65536 {
+fn (mut e Encoder) encode_ext_preamble(tag u8, length int) {
+	if length == 1 {
+		e.write_u8(mp_fix_ext_1, tag)
+	} else if length == 2 {
+		e.write_u8(mp_fix_ext_2, tag)
+	} else if length == 4 {
+		e.write_u8(mp_fix_ext_4, tag)
+	} else if length == 8 {
+		e.write_u8(mp_fix_ext_8, tag)
+	} else if length == 16 {
+		e.write_u8(mp_fix_ext_16, tag)
+	} else if length < 256 {
+		e.write_u8(mp_ext_8, u8(length), tag)
+	} else if length < 65536 {
 		e.write_u8(mp_ext_16)
-		e.write_u16(u16(l))
-		e.write_u8(xtag)
+		e.write_u16(u16(length))
+		e.write_u8(tag)
 	} else {
 		e.write_u8(mp_ext_32)
-		e.write_u32(u32(l))
-		e.write_u8(xtag)
+		e.write_u32(u32(length))
+		e.write_u8(tag)
 	}
 }
 
-fn (mut e Encoder) write_container_len(ct MsgpackContainerType, l int) {
-	if ct.fix_cutoff > 0 && l < int(ct.fix_cutoff) {
-		e.write_u8(ct.b_fix_min | u8(l))
-	} else if ct.b8 > 0 && l < 256 {
-		e.write_u8(ct.b8, u8(l))
-	} else if l < 65536 {
+fn (mut e Encoder) write_container_len(ct ContainerType, length int) {
+	if ct.fix_cutoff > 0 && length < int(ct.fix_cutoff) {
+		e.write_u8(ct.b_fix_min | u8(length))
+	} else if ct.b8 > 0 && length < 256 {
+		e.write_u8(ct.b8, u8(length))
+	} else if length < 65536 {
 		e.write_u8(ct.b16)
-		e.write_u16(u16(l))
+		e.write_u16(u16(length))
 	} else {
 		e.write_u8(ct.b32)
-		e.write_u32(u32(l))
+		e.write_u32(u32(length))
 	}
 }
 
 pub fn (mut e Encoder) write_array_start(length int) {
-	e.write_container_len(msgpack_container_list, length)
+	e.write_container_len(container_array, length)
 }
 
 pub fn (mut e Encoder) write_map_start(length int) {
-	e.write_container_len(msgpack_container_map, length)
+	e.write_container_len(container_map, length)
 }
 
 fn (mut e Encoder) write_string(s string) {
-	e.b.write_string(s)
+	e.buffer.write_string(s)
 }
 
 fn (mut e Encoder) write_u16(i u16) {
@@ -376,7 +370,7 @@ pub fn (mut e Encoder) write_f64(f f64) {
 
 // write byte array
 fn (mut e Encoder) write(b []u8) {
-	e.b.write(b) or { panic('write error') }
+	e.buffer.write(b) or { panic('write error') }
 }
 
 // write one or more bytes
@@ -384,6 +378,6 @@ fn (mut e Encoder) write_u8(b ...u8) {
 	if b.len > 1 {
 		e.write(b)
 	} else {
-		e.b.write_u8(b[0])
+		e.buffer.write_u8(b[0])
 	}
 }
