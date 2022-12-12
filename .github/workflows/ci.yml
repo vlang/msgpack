@@ -32,6 +32,9 @@ jobs:
       - name: Ensure docs is OK
         run: v check-md ~/.vmodules/msgpack/README.md
 
+      - name: Ensure all examples compile with -W
+        run: v -W should-compile-all ~/.vmodules/msgpack/examples/
+
       - name: Run basic example with -Wimpure-v
         run: v -Wimpure-v crun ~/.vmodules/msgpack/examples/basic.v
 
