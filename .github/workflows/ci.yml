@@ -1,0 +1,35 @@
+name: Build and Test with latest V
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout V
+        uses: actions/checkout@v2
+        with:
+          repository: vlang/v
+          path: v
+
+      - name: Checkout msgpack
+        uses: actions/checkout@v2
+        with:
+          path: ~/.vmodules/msgpack
+
+      - name: Build V
+        run: cd v && make && sudo ./v symlink && cd -
+
+      - name: V doctor
+        run: v doctor
+
+      - name: Ensure everything is formatted
+        run: v fmt -verify ~/.vmodules/msgpack/
+
+      - name: Run example with -Wimpure-v
+        run: v -Wimpure-v crun ~/.vmodules/msgpack/examples/basic.v
+
+      - name: Run example with -prod -cstrict -Wimpure-v -cc clang
+        run: |
+            cd ~/.vmodules/msgpack
+            v -prod -cstrict -Wimpure-v -cc clang crun examples/basic.v
