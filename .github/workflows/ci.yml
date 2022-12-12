@@ -26,6 +26,9 @@ jobs:
       - name: Ensure everything is formatted
         run: v fmt -verify ~/.vmodules/msgpack/
 
+      - name: Ensure docs is OK
+        run: v check-md ~/.vmodules/msgpack/README.md
+
       - name: Run example with -Wimpure-v
         run: v -Wimpure-v crun ~/.vmodules/msgpack/examples/basic.v
 
