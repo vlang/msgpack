@@ -50,22 +50,22 @@ fn main() {
 		}
 	}
 	b.measure('json.encode')
-	
+
 	for _ in 0 .. max_iterations {
-		es :=  msgpack.encode<Person>(p)
+		es := msgpack.encode[Person](p)
 		if p.age != 99 {
 			println('error: ${es}')
 		}
 	}
 	b.measure('msgpack.encode')
 
-	encoded := msgpack.encode<Person>(p)
+	encoded := msgpack.encode[Person](p)
 
 	mut decoder := msgpack.new_decoder()
 	for _ in 0 .. max_iterations {
-		p :=  decoder.decode(encoded)
-		if p.age != 99 {
-			println('error: ${p}')
+		m := decoder.decode(encoded)
+		if m.age != 99 {
+			println('error: ${m}')
 		}
 	}
 	b.measure('msgpack.decode')
