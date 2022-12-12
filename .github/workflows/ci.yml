@@ -15,10 +15,10 @@ jobs:
       - name: Checkout msgpack
         uses: actions/checkout@v2
         with:
-          path: /tmp/msgpack
+          path: /home/runner/work/msgpack/msgpack/repo
 
       - name: Symlink msgpack
-        run: ln -s /tmp/msgpack ~/.vmodules/msgpack
+        run: ln -s /home/runner/work/msgpack/msgpack/repo ~/.vmodules/msgpack
 
       - name: Build V
         run: cd v && make && sudo ./v symlink && cd -
