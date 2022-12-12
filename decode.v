@@ -20,25 +20,25 @@ pub fn new_decoder() Decoder {
 	return Decoder{}
 }
 
-pub fn decode[T](src []u8) ?T {
+pub fn decode[T](src []u8) !T {
 	return T{}
 }
 
-pub fn (mut d Decoder) decode_from_string(data string) ? {
-	d.decode(hex.decode(data) or { panic('error decoding hex string') })?
+pub fn (mut d Decoder) decode_from_string(data string) ! {
+	d.decode(hex.decode(data) or { return error('error decoding hex string') })!
 }
 
 // TODO: proper decoding into data structures
 // for now just get decoding of all types working.
-pub fn (mut d Decoder) decode(data []u8) ? {
+pub fn (mut d Decoder) decode(data []u8) ! {
 	d.buffer = data
 	for d.pos < d.buffer.len {
 		d.next()
-		d.decode_()?
+		d.decode_()!
 	}
 }
 
-fn (mut d Decoder) decode_() ? {
+fn (mut d Decoder) decode_() ! {
 	match d.bd {
 		mp_nil {
 			// n.v = .nil_
@@ -114,16 +114,16 @@ fn (mut d Decoder) decode_() ? {
 			} else if d.bd in [mp_str_8, mp_str_16, mp_str_32]
 				|| (d.bd >= mp_fix_str_min && d.bd <= mp_fix_str_max) {
 				// println('string')
-				d.decode_string()?
+				d.decode_string()!
 			} else if d.bd in [mp_array_16, mp_array_32]
 				|| (d.bd >= mp_fix_array_min && d.bd <= mp_fix_array_max) {
 				println('array')
 			} else if d.bd in [mp_map_16, mp_map_32]
 				|| (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
-				d.decode_map()?
+				d.decode_map()!
 			} else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16)
 				|| (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
-				d.decode_ext()?
+				d.decode_ext()!
 			}
 		}
 	}
@@ -171,9 +171,9 @@ fn (mut d Decoder) decode_() ? {
 	// 	}
 }
 
-fn (mut d Decoder) decode_ext() ? {
+fn (mut d Decoder) decode_ext() ! {
 	// n.v = valueTypeExt
-	clen := d.read_ext_len()?
+	clen := d.read_ext_len()!
 	println('decode_ext - container len: ${clen}')
 	if d.bd == mp_time_ext_type {
 		// n.v = valueTypeTime
@@ -189,7 +189,7 @@ fn (mut d Decoder) decode_ext() ? {
 	}
 }
 
-fn (mut d Decoder) decode_string() ? {
+fn (mut d Decoder) decode_string() ! {
 	ct := match d.config.write_ext {
 		true {
 			match d.config.string_raw {
@@ -201,22 +201,22 @@ fn (mut d Decoder) decode_string() ? {
 			container_raw_legacy
 		}
 	}
-	len := d.read_container_len(ct)?
+	len := d.read_container_len(ct)!
 	x := d.read_n(len)
 	println('string: ${x.bytestr()} - len: ${len}')
-	d.decode_()?
+	d.decode_()!
 }
 
-fn (mut d Decoder) decode_map() ? {
+fn (mut d Decoder) decode_map() ! {
 	// containerLen := d.arrayStart(d.d.ReadArrayStart())
 	// if containerLen == 0 {
 	// 	d.arrayEnd()
 	// 	return
 	// }
 	d.next()
-	container_len := d.read_map_start()?
+	container_len := d.read_map_start()!
 	println('map container_len: ${container_len}')
-	d.decode_()?
+	d.decode_()!
 }
 
 fn (mut d Decoder) container_type() ValueType {
@@ -245,7 +245,7 @@ fn (mut d Decoder) container_type() ValueType {
 	return .unset
 }
 
-fn (mut d Decoder) read_container_len(ct ContainerType) ?int {
+fn (mut d Decoder) read_container_len(ct ContainerType) !int {
 	bd := d.bd
 	if bd == ct.b8 {
 		return int(d.read_1())
@@ -263,7 +263,7 @@ fn (mut d Decoder) read_container_len(ct ContainerType) ?int {
 	// return
 }
 
-fn (mut d Decoder) read_map_start() ?int {
+fn (mut d Decoder) read_map_start() !int {
 	// if d.advanceNil() {
 	if d.bd == mp_nil {
 		return container_len_nil
@@ -271,7 +271,7 @@ fn (mut d Decoder) read_map_start() ?int {
 	return d.read_container_len(container_map)
 }
 
-fn (mut d Decoder) read_array_start() ?int {
+fn (mut d Decoder) read_array_start() !int {
 	// if d.advanceNil() {
 	if d.bd == mp_nil {
 		return container_len_nil
@@ -279,7 +279,7 @@ fn (mut d Decoder) read_array_start() ?int {
 	return d.read_container_len(container_array)
 }
 
-fn (mut d Decoder) read_ext_len() ?int {
+fn (mut d Decoder) read_ext_len() !int {
 	match d.bd {
 		mp_fix_ext_1 {
 			d.next()
