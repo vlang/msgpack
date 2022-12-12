@@ -12,19 +12,19 @@ jobs:
           repository: vlang/v
           path: v
 
-      - name: Checkout msgpack
-        uses: actions/checkout@v2
-        with:
-          path: /home/runner/work/msgpack/msgpack/repo
-
-      - name: Symlink msgpack
-        run: ln -s /home/runner/work/msgpack/msgpack/repo ~/.vmodules/msgpack
-
       - name: Build V
         run: cd v && make && sudo ./v symlink && cd -
 
       - name: V doctor
         run: v doctor
+
+      - name: Checkout msgpack
+        uses: actions/checkout@v2
+        with:
+          path: repo
+
+      - name: Symlink msgpack
+        run: mkdir -p ~/.vmodules/ ; ln -s $(realpath repo) ~/.vmodules/msgpack
 
       - name: Ensure everything is formatted
         run: v fmt -verify ~/.vmodules/msgpack/
