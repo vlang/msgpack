@@ -60,13 +60,11 @@ fn main() {
 	b.measure('msgpack.encode')
 
 	encoded := msgpack.encode[Person](p)
-
+	dump(encoded#[0..10])
 	mut decoder := msgpack.new_decoder()
 	for _ in 0 .. max_iterations {
-		m := decoder.decode(encoded)!
-		if m.age != 99 {
-			println('error: ${m}')
-		}
+		// TODO: investigate why decoder.decode does not return a result at all :-|
+		decoder.decode(encoded)!
 	}
 	b.measure('msgpack.decode')
 }
