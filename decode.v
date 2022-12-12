@@ -20,7 +20,7 @@ pub fn new_decoder() Decoder {
 	return Decoder{}
 }
 
-pub fn decode<T>(src []u8) ?T {
+pub fn decode[T](src []u8) ?T {
 	return T{}
 }
 
@@ -100,7 +100,7 @@ fn (mut d Decoder) decode_() ? {
 			// n.i = i64(int32(binary.big_endian_u32(d.d.decRd.readn4())))
 			i := i64(int(binary.big_endian_u32(d.read_n(4))))
 			// d.next()
-			println('int: $i')
+			println('int: ${i}')
 		}
 		mp_i64 {
 			// n.v = valueTypeInt
@@ -174,11 +174,11 @@ fn (mut d Decoder) decode_() ? {
 fn (mut d Decoder) decode_ext() ? {
 	// n.v = valueTypeExt
 	clen := d.read_ext_len()?
-	println('decode_ext - container len: $clen')
+	println('decode_ext - container len: ${clen}')
 	if d.bd == mp_time_ext_type {
 		// n.v = valueTypeTime
 		t := d.decode_time(clen)
-		println('time: $t')
+		println('time: ${t}')
 	}
 	// TODO: d.d.bytes?
 	// else if d.d.bytes {
@@ -203,7 +203,7 @@ fn (mut d Decoder) decode_string() ? {
 	}
 	len := d.read_container_len(ct)?
 	x := d.read_n(len)
-	println('string: $x.bytestr() - len: $len')
+	println('string: ${x.bytestr()} - len: ${len}')
 	d.decode_()?
 }
 
@@ -215,7 +215,7 @@ fn (mut d Decoder) decode_map() ? {
 	// }
 	d.next()
 	container_len := d.read_map_start()?
-	println('map container_len: $container_len')
+	println('map container_len: ${container_len}')
 	d.decode_()?
 }
 
@@ -257,7 +257,7 @@ fn (mut d Decoder) read_container_len(ct ContainerType) ?int {
 		return int(ct.b_fix_min ^ bd)
 	} else {
 		// return('cannot read container length: %s: hex: %x, decimal: %d', msg_bad_desc, bd, bd)
-		return error('cannot read container length: $msgpack.msg_bad_desc: hex: $bd.hex(), decimal: $bd')
+		return error('cannot read container length: ${msgpack.msg_bad_desc}: hex: ${bd.hex()}, decimal: ${bd}')
 	}
 	// d.bdRead = false
 	// return
@@ -311,7 +311,7 @@ fn (mut d Decoder) read_ext_len() ?int {
 			return int(binary.big_endian_u32(d.read_n(4)))
 		}
 		else {
-			return error('decoding ext bytes: found unexpected byte: $d.bd.hex()')
+			return error('decoding ext bytes: found unexpected byte: ${d.bd.hex()}')
 		}
 	}
 }

@@ -4,8 +4,8 @@ import msgpack
 import time
 
 pub struct TestStructA {
-	field_a int            [codec: 'codecdata1']
-	field_b string         [codec: 'codecdata2']
+	field_a int         [codec: 'codecdata1']
+	field_b string      [codec: 'codecdata2']
 	field_c TestStructB
 	field_d []string
 	// TODO: fix compiler (comptime generic infer)
@@ -53,30 +53,27 @@ fn main() {
 			TestStructB{
 				field_a: 2
 				field_b: 'field_g.b.TestStructB.field_b'
-			}
+			},
 		]
 		field_h: time.now()
 	}
-	
+
 	// encode data
 	// mut encoder := msgpack.new_encoder()
 	// encoded := encoder.encode<TestStructA>(ts)
-	encoded := msgpack.encode<TestStructA>(ts)
+	encoded := msgpack.encode[TestStructA](ts)
 	println('ts encoded:')
 	println(encoded.hex())
-	
+
 	// encoded := msgpack.encode<int>(111)
 	// encoded := msgpack.encode('msgpack vlang')
 	// encoded := msgpack.encode({'a': 1, 'b': 2, 'c': 3, 'd': 4})
 	// encoded := msgpack.encode(['apple', 'banana'])
-	
 
 	// decode bytes
 	println('ts decoded:')
 	mut decoder := msgpack.new_decoder()
-	decoder.decode(encoded) or {
-		panic('error decoding: $err')
-	}
+	decoder.decode(encoded) or { panic('error decoding: ${err}') }
 
 	// decode string
 	// decoder.decode(encoder.b)

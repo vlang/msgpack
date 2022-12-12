@@ -14,7 +14,7 @@ pub fn new_encoder() Encoder {
 	return Encoder{}
 }
 
-pub fn encode<T>(data T) []u8 {
+pub fn encode[T](data T) []u8 {
 	mut encoder := new_encoder()
 	return encoder.encode(data)
 }
@@ -27,7 +27,7 @@ pub fn (e &Encoder) bytes() []u8 {
 	return e.buffer
 }
 
-pub fn (mut e Encoder) encode<T>(data T) []u8 {
+pub fn (mut e Encoder) encode[T](data T) []u8 {
 	$if T.typ is string {
 		e.encode_string(data)
 	} $else $if T.typ is bool {
