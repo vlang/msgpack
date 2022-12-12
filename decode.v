@@ -193,12 +193,12 @@ fn (mut d Decoder) decode_string() ? {
 	ct := match d.config.write_ext {
 		true {
 			match d.config.string_raw {
-				true { msgpack_container_bin }
-				else { msgpack_container_str }
+				true { container_bin }
+				else { container_str }
 			}
 		}
 		else {
-			msgpack_container_raw_legacy
+			container_raw_legacy
 		}
 	}
 	len := d.read_container_len(ct)?
@@ -245,7 +245,7 @@ fn (mut d Decoder) container_type() ValueType {
 	return .unset
 }
 
-fn (mut d Decoder) read_container_len(ct MsgpackContainerType) ?int {
+fn (mut d Decoder) read_container_len(ct ContainerType) ?int {
 	bd := d.bd
 	if bd == ct.b8 {
 		return int(d.read_1())
@@ -268,7 +268,7 @@ fn (mut d Decoder) read_map_start() ?int {
 	if d.bd == mp_nil {
 		return container_len_nil
 	}
-	return d.read_container_len(msgpack_container_map)
+	return d.read_container_len(container_map)
 }
 
 fn (mut d Decoder) read_array_start() ?int {
@@ -276,7 +276,7 @@ fn (mut d Decoder) read_array_start() ?int {
 	if d.bd == mp_nil {
 		return container_len_nil
 	}
-	return d.read_container_len(msgpack_container_list)
+	return d.read_container_len(container_array)
 }
 
 fn (mut d Decoder) read_ext_len() ?int {
