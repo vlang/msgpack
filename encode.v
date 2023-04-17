@@ -60,18 +60,18 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 		e.encode_time(data)
 	} $else $if T.typ is []u8 {
 		e.encode_string_bytes_raw(data)
-	} $else $if T is $Array {
+	} $else $if T is $array {
 		e.write_array_start(data.len)
 		for value in data {
 			e.encode(value)
 		}
-	} $else $if T is $Map {
+	} $else $if T is $map {
 		e.write_map_start(data.len)
 		for key, value in data {
 			e.encode(key)
 			e.encode(value)
 		}
-	} $else $if T is $Struct {
+	} $else $if T is $struct {
 		// TODO: is there currently a way to get T.fields.len? if not, add it.
 		mut fields_len := 0
 		$for _ in T.fields {
