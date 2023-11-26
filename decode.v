@@ -4,9 +4,7 @@ import time
 import encoding.hex
 import encoding.binary
 
-const (
-	msg_bad_desc = 'unrecognized descriptor byte'
-)
+const msg_bad_desc = 'unrecognized descriptor byte'
 
 struct Decoder {
 	config Config = default_config()
