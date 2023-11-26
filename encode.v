@@ -250,7 +250,7 @@ pub fn (mut e Encoder) encode_string_bytes_raw(bs []u8) {
 
 pub fn (mut e Encoder) encode_time(t time.Time) {
 	// if t.is_zero() {
-	if t.second == 0 && t.microsecond == 0 {
+	if t.second == 0 && t.nanosecond == 0 {
 		e.encode_nil()
 		return
 	}
