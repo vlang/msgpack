@@ -28,50 +28,50 @@ pub fn (e &Encoder) bytes() []u8 {
 }
 
 pub fn (mut e Encoder) encode[T](data T) []u8 {
-	$if T.typ is string {
+	$if T is string {
 		e.encode_string(data)
-	} $else $if T.typ is bool {
+	} $else $if T is bool {
 		e.encode_bool(data)
 	}
 	// TODO: if int encode_int, if uint encode_uint
 	// instead of needing to check each type, also
 	// then we will be using the smallest storage
-	$else $if T.typ is i8 {
+	$else $if T is i8 {
 		e.encode_i8(data)
-	} $else $if T.typ is i16 {
+	} $else $if T is i16 {
 		e.encode_i16(data)
-	} $else $if T.typ is int {
+	} $else $if T is int {
 		e.encode_i32(data)
-	} $else $if T.typ is i64 {
+	} $else $if T is i64 {
 		e.encode_i64(data)
-	} $else $if T.typ is u8 {
+	} $else $if T is u8 {
 		e.encode_u8(data)
-	} $else $if T.typ is u16 {
+	} $else $if T is u16 {
 		e.encode_u16(data)
-	} $else $if T.typ is u32 {
+	} $else $if T is u32 {
 		e.encode_u32(data)
-	} $else $if T.typ is u64 {
+	} $else $if T is u64 {
 		e.encode_u64(data)
-	} $else $if T.typ is f32 {
+	} $else $if T is f32 {
 		e.encode_f32(data)
-	} $else $if T.typ is f64 {
+	} $else $if T is f64 {
 		e.encode_f64(data)
-	} $else $if T.typ is time.Time {
+	} $else $if T is time.Time {
 		e.encode_time(data)
-	} $else $if T.typ is []u8 {
+	} $else $if T is []u8 {
 		e.encode_string_bytes_raw(data)
-	} $else $if T is $Array {
+	} $else $if T is $array {
 		e.write_array_start(data.len)
 		for value in data {
 			e.encode(value)
 		}
-	} $else $if T is $Map {
+	} $else $if T is $map {
 		e.write_map_start(data.len)
 		for key, value in data {
 			e.encode(key)
 			e.encode(value)
 		}
-	} $else $if T is $Struct {
+	} $else $if T is $struct {
 		// TODO: is there currently a way to get T.fields.len? if not, add it.
 		mut fields_len := 0
 		$for _ in T.fields {
@@ -84,6 +84,7 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 			e.write_map_start(fields_len)
 		}
 		$for field in T.fields {
+			value := data.$(field.name)
 			mut codec_attr := ''
 			for attr in field.attrs {
 				if attr.starts_with('codec:') {
@@ -97,7 +98,9 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 			} else {
 				e.encode_string(field.name)
 			}
-			e.encode(data.$(field.name))
+
+			// e.encode(data.$(field.name)) // FIXME - not work - bug
+			e.encode(value)
 		}
 	}
 	return e.buffer
