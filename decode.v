@@ -149,9 +149,8 @@ pub fn (mut d Decoder) decode_array[T](mut val T) ! {
 	data := d.buffer
 	match d.bd {
 		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
-			mut ana := []int{}
 			array_len := d.read_array_len(data) or { return error('error reading array length') }
-			for i in 0 .. array_len {
+			for _ in 0 .. array_len {
 				// TODO
 			}
 		}
@@ -167,7 +166,7 @@ pub fn (mut d Decoder) decode_map[T](mut val T) ! {
 	match d.bd {
 		mp_map_16, mp_map_32, mp_fix_map_min...mp_fix_map_max {
 			map_len := d.read_map_len(data) or { return error('error reading map length') }
-			for i in 0 .. map_len {
+			for _ in 0 .. map_len {
 				mut key := ''
 
 				key = decode[string](data[d.pos..]) or { return error('error decoding map key') }

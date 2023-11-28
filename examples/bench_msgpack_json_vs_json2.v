@@ -1,3 +1,5 @@
+module main
+
 import os
 import json
 import x.json2
@@ -64,7 +66,7 @@ fn main() {
 	mut decoder := msgpack.new_decoder()
 	for _ in 0 .. max_iterations {
 		// TODO: investigate why decoder.decode does not return a result at all :-|
-		decoder.decode(encoded)!
+		decoder.decode[Person](encoded)!
 	}
 	b.measure('msgpack.decode')
 }
