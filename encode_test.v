@@ -49,5 +49,5 @@ fn test_encoding() {
 	assert msgpack.encode(time.unix(1679922896)) == hex.decode('d6ff642196d0')! // REVIEW
 
 	// Test encoding byte slices
-	assert msgpack.encode([u8(1), 2, 3]) == hex.decode('c403010203')!
+	assert msgpack.encode([u8(1), 2, 3]) == hex.decode('c403010203')! // REVIEW
 }
