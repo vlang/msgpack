@@ -31,6 +31,8 @@ fn test_encoding() {
 		'name': 'John'
 		'age':  '30'
 	}) == hex.decode('82a46e616d65a44a6f686ea3616765a23330')!
+
+	// Test encoding struct
 	assert msgpack.encode(Struct{'John', 30}) == hex.decode('82a161a44a6f686ea162d20000001e')!
 	// assert msgpack.encode({}) == hex.decode('80')!
 
@@ -39,7 +41,8 @@ fn test_encoding() {
 	assert msgpack.encode(false) == hex.decode('c2')!
 
 	// Test encoding floating-point numbers
-	assert msgpack.encode(3.14) == hex.decode('cb40091eb851eb851f')!
+	assert msgpack.encode(f64(3.14)) == hex.decode('cb40091eb851eb851f')!
+	assert msgpack.encode(f32(3.14)) == hex.decode('ca4048f5c3')!
 
 	// Test encoding time
 	// Assuming time is 2023-11-27 12:34:56
