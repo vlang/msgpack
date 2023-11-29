@@ -73,7 +73,14 @@ fn main() {
 	// decode bytes
 	println('ts decoded:')
 	mut decoder := msgpack.new_decoder()
-	decoder.decode[TestStructA](encoded) or { panic('error decoding: ${err}') }
+
+	mut val := TestStructA{}
+	decoder.decode[TestStructA](encoded, mut val) or { error('error decoding: ${err}') }
+
+	result := msgpack.decode[TestStructA](encoded) or {
+		eprintln('error decoding: ${err}')
+		return
+	}
 
 	// decode string
 	// decoder.decode(encoder.b)

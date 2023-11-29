@@ -63,10 +63,9 @@ fn main() {
 
 	encoded := msgpack.encode[Person](p)
 	dump(encoded#[0..10])
-	mut decoder := msgpack.new_decoder()
 	for _ in 0 .. max_iterations {
 		// TODO: investigate why decoder.decode does not return a result at all :-|
-		decoder.decode[Person](encoded)!
+		msgpack.decode[Person](encoded)!
 	}
 	b.measure('msgpack.decode')
 }
