@@ -51,9 +51,8 @@ fn test_decoding() {
 	assert msgpack.decode[f64](hex.decode('cb40091eb851eb851f')!)! == 3.14
 	assert msgpack.decode[f32](hex.decode('ca4048f5c3')!)! == 3.14
 
-	// // Test decoding time
-	// // Assuming time is 2023-11-27 12:34:56
-	// assert msgpack.decode[time.Time](hex.decode('d6ff642196d0')!)! == time.unix(1679922896)
+	// Test decoding time
+	assert msgpack.decode[time.Time](hex.decode('d6ff642196d0')!)! == time.unix(1679922896)
 
 	// // Test decoding byte slices
 	// assert msgpack.decode[[]u8](hex.decode('c403010203')!)! == [u8(1), 2, 3]

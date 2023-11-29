@@ -35,8 +35,6 @@ pub fn (mut d Decoder) decode_from_string[T](data string) ! {
 pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 	d.buffer = data
 	d.next()!
-	println(d.buffer)
-	println(d.bd)
 
 	$if T is $int {
 		d.decode_integer[T](mut val) or { return error('error decoding integer: ${err}') }
@@ -221,10 +219,12 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 					|  0xd6  |   -1   |   seconds in 32-bit unsigned int  |
 					+--------+--------+--------+--------+--------+--------+
 				*/
-				sec := int(binary.big_endian_u32(data[d.pos..d.pos + 4]))
-				println(binary.big_endian_u32(data[d.pos..d.pos + 4]))
-				val = time.unix(i64(sec))
-				d.pos += 4
+				if data[d.pos] != u8(0xFF) {
+					return error('invalid extension format')
+				}
+				data32 := binary.big_endian_u32(data[d.pos + 1..d.pos + 4])
+				val = time.unix(i64(data32))
+				d.pos += 5
 			}
 			mp_fix_ext_8 {
 				/*
@@ -234,8 +234,13 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 					|  0xd7  |   -1   | nanosec. in 30-bit unsigned int |   seconds in 34-bit unsigned int    |
 					+--------+--------+--------+--------+--------+------^-+--------+--------+--------+--------+
 				*/
-				sec := int(binary.big_endian_u64(data[d.pos..d.pos + 8]))
-				val = time.unix(i64(sec))
+				if data[d.pos] != u8(0xFF) {
+					return error('invalid extension format')
+				}
+				data64 := binary.big_endian_u64(data[d.pos + 1..d.pos + 8])
+				sec := int(data64 & 0x00000003ffffffff)
+				nsec := int(data64 >> 34)
+				val = time.unix_nanosecond(i64(sec), nsec)
 				d.pos += 8
 			}
 			mp_ext_8 {
@@ -249,8 +254,13 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 										seconds in 64-bit signed int                        |
 					+--------+--------+--------+--------+--------+--------+--------+--------+
 				*/
-				sec := int(binary.big_endian_u64(data[d.pos..d.pos + 12]))
-				val = time.unix(i64(sec))
+
+				if data[d.pos] != u8(0x0C) || data[d.pos + 4] != u8(0xFF) {
+					return error('invalide extension format')
+				}
+				data32 := binary.big_endian_u32(data[d.pos + 1 + 4..d.pos + 12])
+				data64 := binary.big_endian_u64(data[d.pos + 1 + 8..d.pos + 12])
+				val = time.unix_nanosecond(i64(data64), data32)
 				d.pos += 12
 			}
 			else {
