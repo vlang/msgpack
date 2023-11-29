@@ -47,7 +47,7 @@ pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 	} $else $if T is []u8 {
 		d.decode_binary[T](mut val) or { return error('error decoding binary: ${err}') }
 	} $else $if T is $array {
-		d.decode_array[T](mut val) or { return error('error decoding array: ${err}') }
+		d.decode_array(mut val) or { return error('error decoding array: ${err}') }
 	} $else $if T is $map {
 		d.decode_map[T](mut val) or { return error('error decoding map: ${err}') }
 	} $else $if T is time.Time {
@@ -147,12 +147,7 @@ pub fn (mut d Decoder) decode_binary[T](mut val T) ! {
 	}
 }
 
-pub fn (mut d Decoder) decode_array[T](mut val T) ! {
-	decode_array(mut val, mut d)!
-}
-
-@[deprecated: 'waiting #20033 be solved']
-fn decode_array[T](mut val []T, mut d Decoder) ! {
+pub fn (mut d Decoder) decode_array[T](mut val []T) ! {
 	data := d.buffer
 	match d.bd {
 		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
