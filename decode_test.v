@@ -20,14 +20,18 @@ fn test_decoding() {
 	assert msgpack.decode[string](hex.decode('a0')!)! == '' // Test empty string
 
 	// Test decoding arrays
-	// assert msgpack.decode[[]int](hex.decode('93d200000001d200000002d200000003')!)! == [1, 2, 3]
+	assert msgpack.decode[[]int](hex.decode('93d200000001d200000002d200000003')!)! == [
+		1,
+		2,
+		3,
+	]
 
-	// msgpack.decode[[]u8](msgpack.encode([u8(1),1,2]))!
-	// msgpack.decode[[]int](msgpack.encode([1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]))!
-	// msgpack.decode[[]u32](msgpack.encode([u32(1),1,2]))!
+	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,2]))! == [u8(1),1,2]
+	// asser msgpack.decode[[]int](msgpack.encode([1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]))! == [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+	assert msgpack.decode[[]u32](msgpack.encode([u32(1), 1, 2]))! == [u32(1), 1, 2]
 	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,1]))! == [u8(1), 2, 3]
-	// assert msgpack.decode[[]int](msgpack.encode([1,1,1]))! == [1, 2, 3]
-	// assert msgpack.decode[[]int](hex.decode('90')!)! == []  // Test empty array
+	assert msgpack.decode[[]int](msgpack.encode([1, 1, 1]))! == [1, 1, 1]
+	assert msgpack.decode[[]int](hex.decode('90')!)! == []
 
 	// // Test decoding maps
 	// assert msgpack.decode[map[string]string](hex.decode('82a46e616d65a44a6f686ea3616765a23330')!)! == {

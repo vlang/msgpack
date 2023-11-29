@@ -35,6 +35,8 @@ pub fn (mut d Decoder) decode_from_string[T](data string) ! {
 pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 	d.buffer = data
 	d.next()!
+	println(d.buffer)
+	println(d.bd)
 
 	$if T is $int {
 		d.decode_integer[T](mut val) or { return error('error decoding integer: ${err}') }
@@ -146,12 +148,27 @@ pub fn (mut d Decoder) decode_binary[T](mut val T) ! {
 }
 
 pub fn (mut d Decoder) decode_array[T](mut val T) ! {
+	decode_array(mut val, mut d)!
+}
+
+@[deprecated: 'waiting #20033 be solved']
+fn decode_array[T](mut val []T, mut d Decoder) ! {
 	data := d.buffer
 	match d.bd {
 		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
 			array_len := d.read_array_len(data) or { return error('error reading array length') }
+			elements_buffer := data[1..]
+
+			mut d_for_array := new_decoder()
+
 			for _ in 0 .. array_len {
-				// TODO
+				mut element := T{}
+
+				d_for_array.decode[T](elements_buffer, mut element) or {
+					return error('error decoding array element')
+				}
+
+				val << element
 			}
 		}
 		else {
