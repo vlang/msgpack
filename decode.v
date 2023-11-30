@@ -19,6 +19,107 @@ pub fn new_decoder() Decoder {
 	return Decoder{}
 }
 
+pub fn decode_to_json[T](src []u8) !string {
+	mut d := new_decoder()
+
+	json := d.decode_to_json[T](src) or { return error('error decoding to JSON: ${err}') }
+
+	return json
+}
+
+pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
+	d.buffer = src
+	d.next()!
+
+	mut result := ''
+
+	data := d.buffer
+
+	match d.bd {
+		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
+			array_len := d.read_array_len(data) or { return error('error reading array length') }
+
+			mut d_for_array := new_decoder()
+
+			result += '['
+
+			for i in 0 .. array_len {
+				if i > 0 {
+					result += ','
+				}
+
+				element_json := d_for_array.decode_to_json[T](data[1..]) or {
+					return error('error converting array element to JSON ${err}')
+				}
+
+				result += element_json
+			}
+
+			result += ']'
+		}
+		mp_map_16, mp_map_32, mp_fix_map_min...mp_fix_map_max {
+			map_len := d.read_map_len(src) or { return error('error reading map length') }
+
+			result += '{'
+
+			for i in 0 .. map_len {
+				if i > 0 {
+					result += ','
+				}
+
+				key := d.decode_to_json[string](src) or {
+					return error('error converting map key to JSON: ${err}')
+				}
+
+				value_json := d.decode_to_json[T](src) or {
+					return error('error converting map value to JSON')
+				}
+
+				result += '${key}:${value_json}'
+			}
+
+			result += '}'
+		}
+		mp_nil {
+			result += 'null'
+		}
+		mp_true, mp_false {
+			mut bool_val := false
+			d.decode_bool(mut bool_val) or { return error('error decoding boolean: ${err}') }
+			result += bool_val.str()
+		}
+		mp_f32, mp_f64 {
+			mut float_val := 0.0
+			d.decode_float(mut float_val) or { return error('error decoding float: ${err}') }
+			result += float_val.str()
+		}
+		mp_u8, mp_u16, mp_u32, mp_u64, mp_i8, mp_i16, mp_i32, mp_i64 {
+			mut int_val := 0
+			d.decode_integer(mut int_val) or { return error('error decoding integer: ${err}') }
+			result += int_val.str()
+		}
+		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
+			mut str_val := ''
+			d.decode_string(mut str_val) or { return error('error decoding string: ${err}') }
+			result += '"${str_val}"'
+		}
+		mp_bin_8, mp_bin_16, mp_bin_32 {
+			bin_len := d.read_bin_len(src) or { return error('error reading binary length') }
+			for i in 0 .. bin_len {
+				result += src[d.pos + i].str()
+			}
+
+			d.pos += bin_len
+		}
+		mp_ext_8, mp_ext_16, mp_ext_32 {}
+		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {}
+		else {
+			return error('unsupported descriptor byte for conversion to JSON')
+		}
+	}
+	return result
+}
+
 pub fn decode[T](src []u8) !T {
 	mut val := T{}
 

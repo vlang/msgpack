@@ -19,6 +19,12 @@ pub fn encode[T](data T) []u8 {
 	return encoder.encode(data)
 }
 
+pub fn encode_to_json[T](data T) string {
+	mut encoder := new_encoder()
+	encoded := encoder.encode(data)
+	return decode_to_json[T](encoded) or { '' }
+}
+
 pub fn (e &Encoder) str() string {
 	return e.buffer.hex()
 }
