@@ -70,17 +70,18 @@ fn main() {
 	// encoded := msgpack.encode({'a': 1, 'b': 2, 'c': 3, 'd': 4})
 	// encoded := msgpack.encode(['apple', 'banana'])
 
-	// decode bytes
-	println('ts decoded:')
-	mut decoder := msgpack.new_decoder()
+	// Not working for now - waiting for #20027 be solved
+	// // decode bytes
+	// println('ts decoded:')
+	// mut decoder := msgpack.new_decoder()
 
-	mut val := TestStructA{}
-	decoder.decode[TestStructA](encoded, mut val) or { error('error decoding: ${err}') }
+	// mut val := TestStructA{}
+	// decoder.decode[TestStructA](encoded, mut val) or { error('error decoding: ${err}') }
 
-	result := msgpack.decode[TestStructA](encoded) or {
-		eprintln('error decoding: ${err}')
-		return
-	}
+	// result := msgpack.decode[TestStructA](encoded) or {
+	// 	eprintln('error decoding: ${err}')
+	// 	return
+	// }
 
 	// decode string
 	// decoder.decode(encoder.b)
