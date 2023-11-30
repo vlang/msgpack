@@ -3,6 +3,7 @@ module msgpack
 import time
 import encoding.hex
 import encoding.binary
+import math
 
 const msg_bad_desc = 'unrecognized descriptor byte'
 
@@ -11,403 +12,440 @@ struct Decoder {
 mut:
 	pos    int
 	buffer []u8
-	bd     u8
+	bd     u8 // actual buffer value
 }
 
 pub fn new_decoder() Decoder {
 	return Decoder{}
 }
 
+pub fn decode_to_json[T](src []u8) !string {
+	mut d := new_decoder()
+
+	json := d.decode_to_json[T](src) or { return error('error decoding to JSON: ${err}') }
+
+	return json
+}
+
+pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
+	d.buffer = src
+	d.next()!
+
+	mut result := ''
+
+	data := d.buffer
+
+	match d.bd {
+		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
+			array_len := d.read_array_len(data) or { return error('error reading array length') }
+
+			mut d_for_array := new_decoder()
+
+			result += '['
+
+			for i in 0 .. array_len {
+				if i > 0 {
+					result += ','
+				}
+
+				element_json := d_for_array.decode_to_json[T](data[1..]) or {
+					return error('error converting array element to JSON ${err}')
+				}
+
+				result += element_json
+			}
+
+			result += ']'
+		}
+		mp_map_16, mp_map_32, mp_fix_map_min...mp_fix_map_max {
+			map_len := d.read_map_len(src) or { return error('error reading map length') }
+
+			result += '{'
+
+			for i in 0 .. map_len {
+				if i > 0 {
+					result += ','
+				}
+
+				key := d.decode_to_json[string](src) or {
+					return error('error converting map key to JSON: ${err}')
+				}
+
+				value_json := d.decode_to_json[T](src) or {
+					return error('error converting map value to JSON')
+				}
+
+				result += '${key}:${value_json}'
+			}
+
+			result += '}'
+		}
+		mp_nil {
+			result += 'null'
+		}
+		mp_true, mp_false {
+			mut bool_val := false
+			d.decode_bool(mut bool_val) or { return error('error decoding boolean: ${err}') }
+			result += bool_val.str()
+		}
+		mp_f32, mp_f64 {
+			mut float_val := 0.0
+			d.decode_float(mut float_val) or { return error('error decoding float: ${err}') }
+			result += float_val.str()
+		}
+		mp_u8, mp_u16, mp_u32, mp_u64, mp_i8, mp_i16, mp_i32, mp_i64 {
+			mut int_val := 0
+			d.decode_integer(mut int_val) or { return error('error decoding integer: ${err}') }
+			result += int_val.str()
+		}
+		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
+			mut str_val := ''
+			d.decode_string(mut str_val) or { return error('error decoding string: ${err}') }
+			result += '"${str_val}"'
+		}
+		mp_bin_8, mp_bin_16, mp_bin_32 {
+			bin_len := d.read_bin_len(src) or { return error('error reading binary length') }
+			for i in 0 .. bin_len {
+				result += src[d.pos + i].str()
+			}
+
+			d.pos += bin_len
+		}
+		mp_ext_8, mp_ext_16, mp_ext_32 {}
+		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {}
+		else {
+			return error('unsupported descriptor byte for conversion to JSON')
+		}
+	}
+	return result
+}
+
 pub fn decode[T](src []u8) !T {
-	return T{}
+	mut val := T{}
+
+	mut d := new_decoder()
+	d.decode[T](src, mut val) or { return error('error decoding data: ${err}') }
+
+	return val
 }
 
-pub fn (mut d Decoder) decode_from_string(data string) ! {
-	d.decode(hex.decode(data) or { return error('error decoding hex string') })!
+pub fn (mut d Decoder) decode_from_string[T](data string) ! {
+	d.decode[T](hex.decode(data) or { return error('error decoding hex string') })!
 }
 
-// TODO: proper decoding into data structures
-// for now just get decoding of all types working.
-pub fn (mut d Decoder) decode(data []u8) ! {
+pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 	d.buffer = data
-	for d.pos < d.buffer.len {
-		d.next()
-		d.decode_()!
+	d.next()!
+
+	$if T is $int {
+		d.decode_integer[T](mut val) or { return error('error decoding integer: ${err}') }
+	} $else $if T is $float {
+		d.decode_float[T](mut val) or { return error('error decoding float: ${err}') }
+	} $else $if T is string {
+		d.decode_string[T](mut val) or { return error('error decoding string: ${err}') }
+	} $else $if T is []u8 {
+		d.decode_binary[T](mut val) or { return error('error decoding binary: ${err}') }
+	} $else $if T is $array {
+		d.decode_array(mut val) or { return error('error decoding array: ${err}') }
+	} $else $if T is $map {
+		d.decode_map[T](mut val) or { return error('error decoding map: ${err}') }
+	} $else $if T is time.Time {
+		d.decode_time[T](mut val) or { return error('error decoding time: ${err}') }
+	} $else $if T is $struct {
+		d.decode_struct[T](mut val) or { return error('error decoding struct: ${err}') }
+	} $else $if T is bool {
+		d.decode_bool[T](mut val) or { return error('error decoding boolean: ${err}') }
+	} $else {
+		return error('unsupported type for decoding: ${T.name}')
 	}
 }
 
-fn (mut d Decoder) decode_() ! {
+pub fn (mut d Decoder) decode_integer[T](mut val T) ! {
+	data := d.buffer
 	match d.bd {
-		mp_nil {
-			// n.v = .nil_
-			// d.bdRead = false
-			println('nil')
-		}
-		mp_false {
-			// n.v = valueTypeBool
-			// n.b = false
-			println('false')
-		}
-		mp_true {
-			// n.v = valueTypeBool
-			// n.b = true
-			println('true')
-		}
-		mp_f32 {
-			// n.v = valueTypeFloat
-			// n.f = float64(math.Float32frombits(binary.big_endian_u32(d.d.decRd.readn4())))
-			println('f32')
-		}
-		mp_f64 {
-			// n.v = valueTypeFloat
-			// n.f = math.Float64frombits(binary.big_endian_u64(d.d.decRd.readn8()))
-			println('f64')
-		}
 		mp_u8 {
-			// n.v = valueTypeUint
-			// n.u = u64(d.d.decRd.readn1())
-			println('u8')
+			val = data[d.pos]
+			d.pos++
 		}
 		mp_u16 {
-			// n.v = valueTypeUint
-			// n.u = u64(binary.big_endian_u16(d.d.decRd.readn2()))
-			println('u16')
+			val = u64(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+			d.pos += 2
 		}
 		mp_u32 {
-			// n.v = valueTypeUint
-			// n.u = u64(binary.big_endian_u32(d.d.decRd.readn4()))
-			println('u32')
+			val = u64(int(binary.big_endian_u32(data[d.pos..d.pos + 4])))
+			d.pos += 4
 		}
 		mp_u64 {
-			// n.v = valueTypeUint
-			// n.u = u64(binary.big_endian_u64(d.d.decRd.readn8()))
-			println('u64')
+			val = u64(binary.big_endian_u64(data[d.pos..d.pos + 8]))
+			d.pos += 8
 		}
 		mp_i8 {
-			// n.v = valueTypeInt
-			// n.i = i64(int8(d.d.decRd.readn1()))
-			println('i8')
+			val = i64(data[d.pos])
+			d.pos++
 		}
 		mp_i16 {
-			// n.v = valueTypeInt
-			// n.i = i64(int16(binary.big_endian_u16(d.d.decRd.readn2())))
-			println('i16')
+			val = i64(i16(binary.big_endian_u16(data[d.pos..d.pos + 2])))
+			d.pos += 2
 		}
 		mp_i32 {
-			// n.v = valueTypeInt
-			// n.i = i64(int32(binary.big_endian_u32(d.d.decRd.readn4())))
-			i := i64(int(binary.big_endian_u32(d.read_n(4))))
-			// d.next()
-			println('int: ${i}')
+			val = i64(i32(binary.big_endian_u32(data[d.pos..d.pos + 4])))
+			d.pos += 4
 		}
 		mp_i64 {
-			// n.v = valueTypeInt
-			// n.i = i64(i64(binary.big_endian_u64(d.d.decRd.readn8())))
-			println('i64')
+			val = i64(binary.big_endian_u64(data[d.pos..d.pos + 8]))
+			d.pos += 8
 		}
 		else {
-			// println('else: $d.bd')
-			if d.bd in [mp_bin_8, mp_bin_16, mp_bin_32] {
-				println('bin')
-			} else if d.bd in [mp_str_8, mp_str_16, mp_str_32]
-				|| (d.bd >= mp_fix_str_min && d.bd <= mp_fix_str_max) {
-				// println('string')
-				d.decode_string()!
-			} else if d.bd in [mp_array_16, mp_array_32]
-				|| (d.bd >= mp_fix_array_min && d.bd <= mp_fix_array_max) {
-				println('array')
-			} else if d.bd in [mp_map_16, mp_map_32]
-				|| (d.bd >= mp_fix_map_min && d.bd <= mp_fix_map_max) {
-				d.decode_map()!
-			} else if (d.bd >= mp_fix_ext_1 && d.bd <= mp_fix_ext_16)
-				|| (d.bd >= mp_ext_8 && d.bd <= mp_ext_32) {
-				d.decode_ext()!
-			}
+			return error('invalid integer descriptor byte')
 		}
 	}
-	// default:
-	// 	switch {
-	// 		bd >= mpPosFixNumMin && bd <= mpPosFixNumMax:
-	// 		// positive fixnum (always signed)
-	// 		n.v = valueTypeInt
-	// 		n.i = i64(int8(bd))
-	// 		bd >= mpNegFixNumMin && bd <= mpNegFixNumMax:
-	// 		// negative fixnum
-	// 		n.v = valueTypeInt
-	// 		n.i = i64(int8(bd))
-	// 		bd == mp_str_8, bd == mp_str_16, bd == mp_str_32, bd >= mp_fix_str_min && bd <= mp_fix_str_max:
-	// 		d.d.fauxUnionReadRawBytes(d.h.WriteExt)
-	// 		// if d.h.WriteExt || d.h.RawToString {
-	// 		// 	n.v = .string_
-	// 		// 	n.s = d.d.string_ZC(d.DecodeStringAsBytes())
-	// 		// } else {
-	// 		// 	n.v = .bytes
-	// 		// 	n.l = d.DecodeBytes([]byte{})
-	// 		// }
-	// 		bd == mp_bin_8, bd == mp_bin_16, bd == mp_bin_32:
-	// 		d.d.fauxUnionReadRawBytes(false)
-	// 		bd == mp_array_16, bd == mp_array_32, bd >= mp_fix_array_min && bd <= mp_fix_array_max:
-	// 		n.v = .array
-	// 		decodeFurther = true
-	// 		bd == mp_map_16, bd == mp_map_32, bd >= mp_fix_map_min && bd <= mp_fix_map_max:
-	// 		n.v = .map_
-	// 		decodeFurther = true
-	// 		bd >= mp_fix_ext_1 && bd <= mp_fix_ext_16, bd >= mp_ext_8 && bd <= mp_ext_32:
-	// 		n.v = valueTypeExt
-	// 		clen := d.readExtLen()
-	// 		n.u = u64(d.d.decRd.readn1())
-	// 		if n.u == u64(mpTimeExtTagU) {
-	// 			n.v = valueTypeTime
-	// 			n.t = d.decodeTime(clen)
-	// 		} else if d.d.bytes {
-	// 			n.l = d.d.decRd.rb.readx(uint(clen))
-	// 		} else {
-	// 			n.l = decByteSlice(d.d.r(), clen, d.d.h.MaxInitLen, d.d.b[:])
-	// 		}
-	// 	default:
-	// 		d.d.errorf("cannot infer value: %s: Ox%x/%d/%s", msg_bad_desc, bd, bd, mpdesc(bd))
-	// 	}
 }
 
-fn (mut d Decoder) decode_ext() ! {
-	// n.v = valueTypeExt
-	clen := d.read_ext_len()!
-	println('decode_ext - container len: ${clen}')
-	if d.bd == mp_time_ext_type {
-		// n.v = valueTypeTime
-		t := d.decode_time(clen)
-		println('time: ${t}')
-	}
-	// TODO: d.d.bytes?
-	// else if d.d.bytes {
-	// n.l = d.d.decRd.rb.readx(uint(clen))
-	// }
-	else {
-		// n.l = decByteSlice(d.d.r(), clen, d.d.h.MaxInitLen, d.d.b[:])
-	}
-}
-
-fn (mut d Decoder) decode_string() ! {
-	ct := match d.config.write_ext {
-		true {
-			match d.config.string_raw {
-				true { container_bin }
-				else { container_str }
-			}
-		}
-		else {
-			container_raw_legacy
-		}
-	}
-	len := d.read_container_len(ct)!
-	x := d.read_n(len)
-	println('string: ${x.bytestr()} - len: ${len}')
-	d.decode_()!
-}
-
-fn (mut d Decoder) decode_map() ! {
-	// containerLen := d.arrayStart(d.d.ReadArrayStart())
-	// if containerLen == 0 {
-	// 	d.arrayEnd()
-	// 	return
-	// }
-	d.next()
-	container_len := d.read_map_start()!
-	println('map container_len: ${container_len}')
-	d.decode_()!
-}
-
-fn (mut d Decoder) container_type() ValueType {
-	// if !d.bdRead {
-	// 	d.readNextBd()
-	// }
-	d.next()
-	bd := d.bd
-	if bd == mp_nil {
-		// d.bdRead = false
-		return .nil_
-	} else if bd == mp_bin_8 || bd == mp_bin_16 || bd == mp_bin_32 {
-		return .bytes
-	} else if bd == mp_str_8 || bd == mp_str_16 || bd == mp_str_32
-		|| (bd >= mp_fix_str_min && bd <= mp_fix_str_max) {
-		if d.config.write_ext || d.config.string_raw { // UTF-8 string (new spec)
-			return .string_
-		}
-		return .bytes // raw (old spec)
-	} else if bd == mp_array_16 || bd == mp_array_32
-		|| (bd >= mp_fix_array_min && bd <= mp_fix_array_max) {
-		return .array
-	} else if bd == mp_map_16 || bd == mp_map_32 || (bd >= mp_fix_map_min && bd <= mp_fix_map_max) {
-		return .map_
-	}
-	return .unset
-}
-
-fn (mut d Decoder) read_container_len(ct ContainerType) !int {
-	bd := d.bd
-	if bd == ct.b8 {
-		return int(d.read_1())
-	} else if bd == ct.b16 {
-		return int(binary.big_endian_u16(d.read_n(2)))
-	} else if bd == ct.b32 {
-		return int(binary.big_endian_u32(d.read_n(4)))
-	} else if (ct.b_fix_min & bd) == ct.b_fix_min {
-		return int(ct.b_fix_min ^ bd)
-	} else {
-		// return('cannot read container length: %s: hex: %x, decimal: %d', msg_bad_desc, bd, bd)
-		return error('cannot read container length: ${msgpack.msg_bad_desc}: hex: ${bd.hex()}, decimal: ${bd}')
-	}
-	// d.bdRead = false
-	// return
-}
-
-fn (mut d Decoder) read_map_start() !int {
-	// if d.advanceNil() {
-	if d.bd == mp_nil {
-		return container_len_nil
-	}
-	return d.read_container_len(container_map)
-}
-
-fn (mut d Decoder) read_array_start() !int {
-	// if d.advanceNil() {
-	if d.bd == mp_nil {
-		return container_len_nil
-	}
-	return d.read_container_len(container_array)
-}
-
-fn (mut d Decoder) read_ext_len() !int {
+pub fn (mut d Decoder) decode_float[T](mut val T) ! {
+	data := d.buffer
 	match d.bd {
-		mp_fix_ext_1 {
-			d.next()
-			return 1
+		mp_f32 {
+			val = math.f32_from_bits(binary.big_endian_u32(data[1..4]))
+			d.pos += 4
 		}
-		mp_fix_ext_2 {
-			d.next()
-			return 2
-		}
-		mp_fix_ext_4 {
-			d.next()
-			return 4
-		}
-		mp_fix_ext_8 {
-			d.next()
-			return 8
-		}
-		mp_fix_ext_16 {
-			d.next()
-			return 16
-		}
-		mp_ext_8 {
-			return int(d.read_1())
-		}
-		mp_ext_16 {
-			return int(binary.big_endian_u16(d.read_n(2)))
-		}
-		mp_ext_32 {
-			return int(binary.big_endian_u32(d.read_n(4)))
+		mp_f64 {
+			val = math.f64_from_bits(binary.big_endian_u64(data[1..8]))
+			d.pos += 8
 		}
 		else {
-			return error('decoding ext bytes: found unexpected byte: ${d.bd.hex()}')
+			return error('invalid float descriptor byte')
 		}
 	}
 }
 
-// func (d *msgpackDecDriver) DecodeTime() (t time.Time) {
-// 	// decode time from string bytes or ext
-// 	if d.advanceNil() {
-// 		return
-// 	}
-// 	bd := d.bd
-// 	var clen int
-// 	if bd == mp_bin_8 || bd == mp_bin_16 || bd == mp_bin_32 {
-// 		clen = d.read_container_len(msgpackContainerBin) // binary
-// 	} else if bd == mp_str_8 || bd == mp_str_16 || bd == mp_str_32 ||
-// 		(bd >= mp_fix_str_min && bd <= mp_fix_str_max) {
-// 		clen = d.read_container_len(msgpackContainerStr) // string/raw
-// 	} else {
-// 		// expect to see mp_fix_ext_4,-1 OR mp_fix_ext_8,-1 OR mp_ext_8,12,-1
-// 		d.bdRead = false
-// 		b2 := d.d.decRd.readn1()
-// 		if d.bd == mp_fix_ext_4 && b2 == mpTimeExtTagU {
-// 			clen = 4
-// 		} else if d.bd == mp_fix_ext_8 && b2 == mpTimeExtTagU {
-// 			clen = 8
-// 		} else if d.bd == mp_ext_8 && b2 == 12 && d.d.decRd.readn1() == mpTimeExtTagU {
-// 			clen = 12
-// 		} else {
-// 			d.d.errorf("invalid stream for decoding time as extension: got 0x%x, 0x%x", d.bd, b2)
-// 		}
-// 	}
-// 	return d.decodeTime(clen)
-// }
-
-// fn (mut d Decoder) decode_ext(rv interface{}, basetype reflect.Type, xtag uint64, ext Ext) {
-// 	if xtag > 0xff {
-// 		d.d.errorf("ext: tag must be <= 0xff; got: %v", xtag)
-// 	}
-// 	if d.advanceNil() {
-// 		return
-// 	}
-// 	xbs, realxtag1, zerocopy := d.decodeExtV(ext != nil, uint8(xtag))
-// 	realxtag := u64(realxtag1)
-// 	if ext == nil {
-// 		re := rv.(*RawExt)
-// 		re.Tag = realxtag
-// 		re.setData(xbs, zerocopy)
-// 	} else if ext == SelfExt {
-// 		d.d.sideDecode(rv, basetype, xbs)
-// 	} else {
-// 		ext.ReadExt(rv, xbs)
-// 	}
-// }
-
-fn (mut d Decoder) decode_time(clen int) time.Time {
-	// d.bdRead = false
-	match clen {
-		4 {
-			return time.unix(i64(binary.big_endian_u32(d.read_n(4))))
+pub fn (mut d Decoder) decode_string[T](mut val T) ! {
+	data := d.buffer
+	match d.bd {
+		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
+			str_len := d.read_str_len(data) or { return error('error reading string length') }
+			val = data[d.pos..d.pos + str_len].bytestr()
+			d.pos += str_len
 		}
 		else {
-			panic('unsupported currently')
+			return error('invalid string descriptor byte')
 		}
 	}
-	// match clen {
-	// 	4 {
-	// 		// return time.unix(i64(binary.big_endian_u32(d.d.decRd.readn4())), 0).utc()
-	// 		return time.unix(i64(binary.big_endian_u32(d.read4())), 0).utc()
-	// 	}
-	// 	8 {
-	// 		// tv := binary.big_endian_u64(d.d.decRd.readn8())
-	// 		// return time.Unix(i64(tv&0x00000003ffffffff), i64(tv>>34)).utc()
-	// 		tv := binary.big_endian_u64(d.d.decRd.readn8())
-	// 		return time.unix(i64(tv&0x00000003ffffffff), i64(tv>>34)).utc()
-	// 	}
-	// 	12 {
-	// 		nsec := binary.big_endian_u32(d.readn4())
-	// 		sec := binary.big_endian_u64(d.readn8())
-	// 		return time.unix(i64(sec), i64(nsec)).utc()
-	// 	}
-	// 	else {
-	// 		// d.error("invalid length of bytes for decoding time - expecting 4 or 8 or 12, got $clen")
-	// 	}
-	// }
 }
 
-pub fn (mut d Decoder) next() {
+pub fn (mut d Decoder) decode_binary[T](mut val T) ! {
+	data := d.buffer
+	match d.bd {
+		mp_bin_8, mp_bin_16, mp_bin_32 {
+			bin_len := d.read_bin_len(data) or { return error('error reading binary length') }
+			val = data[d.pos..d.pos + bin_len]
+			d.pos += bin_len
+		}
+		else {
+			return error('invalid binary descriptor byte')
+		}
+	}
+}
+
+pub fn (mut d Decoder) decode_array[T](mut val []T) ! {
+	data := d.buffer
+	match d.bd {
+		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
+			array_len := d.read_array_len(data) or { return error('error reading array length') }
+			elements_buffer := data[1..]
+
+			mut d_for_array := new_decoder()
+
+			for _ in 0 .. array_len {
+				mut element := T{}
+
+				d_for_array.decode[T](elements_buffer, mut element) or {
+					return error('error decoding array element')
+				}
+
+				val << element
+			}
+		}
+		else {
+			return error('invalid array descriptor byte')
+		}
+	}
+}
+
+// TODO
+pub fn (mut d Decoder) decode_map[T](mut val T) ! {
+	data := d.buffer
+	match d.bd {
+		mp_map_16, mp_map_32, mp_fix_map_min...mp_fix_map_max {
+			map_len := d.read_map_len(data) or { return error('error reading map length') }
+			for _ in 0 .. map_len {
+				mut key := ''
+
+				key = decode[string](data[d.pos..]) or { return error('error decoding map key') }
+
+				d.pos += key.len + 1
+				val[key] = unsafe { nil }
+			}
+		}
+		else {
+			return error('invalid map descriptor byte')
+		}
+	}
+}
+
+pub fn (mut d Decoder) decode_struct[T](mut val T) ! {
+	data := d.buffer
+	$for field in T.fields {
+		// Decode each field using its type
+		mut field_val := val.$(field.name)
+		d.decode(data[d.pos..], mut field_val) or {
+			return error('error decoding struct field: ${field.name}')
+		}
+		val[field.name] = field_val
+	}
+}
+
+pub fn (mut d Decoder) decode_bool[T](mut val T) ! {
+	val = d.bd == mp_true
+}
+
+pub fn (mut d Decoder) decode_time[T](mut val T) ! {
+	data := d.buffer
+	$if T is time.Time || T is $int {
+		match d.bd {
+			mp_fix_ext_4 {
+				/*
+				timestamp 32 stores the number of seconds that have elapsed since 1970-01-01 00:00:00 UTC
+					in an 32-bit unsigned integer:
+					+--------+--------+--------+--------+--------+--------+
+					|  0xd6  |   -1   |   seconds in 32-bit unsigned int  |
+					+--------+--------+--------+--------+--------+--------+
+				*/
+				if data[d.pos] != u8(0xFF) {
+					return error('invalid extension format')
+				}
+				data32 := binary.big_endian_u32(data[d.pos + 1..d.pos + 4])
+				val = time.unix(i64(data32))
+				d.pos += 5
+			}
+			mp_fix_ext_8 {
+				/*
+				timestamp 64 stores the number of seconds and nanoseconds that have elapsed since 1970-01-01 00:00:00 UTC
+					in 32-bit unsigned integers:
+					+--------+--------+--------+--------+--------+------|-+--------+--------+--------+--------+
+					|  0xd7  |   -1   | nanosec. in 30-bit unsigned int |   seconds in 34-bit unsigned int    |
+					+--------+--------+--------+--------+--------+------^-+--------+--------+--------+--------+
+				*/
+				if data[d.pos] != u8(0xFF) {
+					return error('invalid extension format')
+				}
+				data64 := binary.big_endian_u64(data[d.pos + 1..d.pos + 8])
+				sec := int(data64 & 0x00000003ffffffff)
+				nsec := int(data64 >> 34)
+				val = time.unix_nanosecond(i64(sec), nsec)
+				d.pos += 8
+			}
+			mp_ext_8 {
+				/*
+				timestamp 96 stores the number of seconds and nanoseconds that have elapsed since 1970-01-01 00:00:00 UTC
+					in 64-bit signed integer and 32-bit unsigned integer:
+					+--------+--------+--------+--------+--------+--------+--------+
+					|  0xc7  |   12   |   -1   |nanoseconds in 32-bit unsigned int |
+					+--------+--------+--------+--------+--------+--------+--------+
+					+--------+--------+--------+--------+--------+--------+--------+--------+
+										seconds in 64-bit signed int                        |
+					+--------+--------+--------+--------+--------+--------+--------+--------+
+				*/
+
+				if data[d.pos] != u8(0x0C) || data[d.pos + 4] != u8(0xFF) {
+					return error('invalide extension format')
+				}
+				data32 := binary.big_endian_u32(data[d.pos + 1 + 4..d.pos + 12])
+				data64 := binary.big_endian_u64(data[d.pos + 1 + 8..d.pos + 12])
+				val = time.unix_nanosecond(i64(data64), data32)
+				d.pos += 12
+			}
+			else {
+				return error('invalid time descriptor byte')
+			}
+		}
+	}
+}
+
+fn (mut d Decoder) read_str_len(data []u8) !int {
+	match d.bd {
+		mp_str_8 {
+			return int(data[d.pos])
+		}
+		mp_str_16 {
+			return int(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+		}
+		mp_str_32 {
+			return int(binary.big_endian_u32(data[d.pos..d.pos + 4]))
+		}
+		mp_fix_str_min...mp_fix_str_max {
+			return data[d.pos - 1] - mp_fix_str_min
+		}
+		else {
+			return error('invalid string length descriptor byte')
+		}
+	}
+}
+
+fn (mut d Decoder) read_bin_len(data []u8) !int {
+	match d.bd {
+		mp_bin_8 {
+			return int(data[d.pos])
+		}
+		mp_bin_16 {
+			return int(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+		}
+		mp_bin_32 {
+			return int(binary.big_endian_u32(data[d.pos..d.pos + 4]))
+		}
+		else {
+			return error('invalid binary length descriptor byte')
+		}
+	}
+}
+
+fn (mut d Decoder) read_array_len(data []u8) !int {
+	match d.bd {
+		mp_array_16 {
+			return int(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+		}
+		mp_array_32 {
+			return int(binary.big_endian_u32(data[d.pos..d.pos + 4]))
+		}
+		mp_fix_array_min...mp_fix_array_max {
+			return data[d.pos - 1] - mp_fix_array_min
+		}
+		else {
+			return error('invalid array length descriptor byte')
+		}
+	}
+}
+
+fn (mut d Decoder) read_map_len(data []u8) !int {
+	match d.bd {
+		mp_map_16 {
+			return int(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+		}
+		mp_map_32 {
+			return int(binary.big_endian_u32(data[d.pos..d.pos + 4]))
+		}
+		mp_fix_map_min...mp_fix_map_max {
+			return data[d.pos - 1] - mp_fix_map_min
+		}
+		else {
+			return error('invalid map length descriptor byte')
+		}
+	}
+}
+
+fn (mut d Decoder) next() ! {
+	if d.pos >= d.buffer.len {
+		return error('unexpected end of data')
+	}
 	d.bd = d.buffer[d.pos]
 	d.pos++
-}
-
-fn (mut d Decoder) read_1() u8 {
-	d.next()
-	return d.buffer[d.pos]
-}
-
-fn (mut d Decoder) read_n(len int) []u8 {
-	b := d.buffer[d.pos..d.pos + len]
-	d.pos += len - 1
-	d.next()
-	return b
 }

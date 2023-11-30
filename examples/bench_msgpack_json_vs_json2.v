@@ -1,3 +1,5 @@
+module main
+
 import os
 import json
 import x.json2
@@ -30,7 +32,7 @@ fn main() {
 			println('error: ${p}')
 		}
 	}
-	b.measure('json.decode')
+	b.measure('json.decode\n')
 
 	// encoding measurements:
 	p := json.decode(Person, s)!
@@ -49,7 +51,15 @@ fn main() {
 			println('json.encode error: ${es}')
 		}
 	}
-	b.measure('json.encode')
+	b.measure('json.encode\n')
+
+	for _ in 0 .. max_iterations {
+		es := msgpack.encode_to_json[Person](p)
+		if es[0] != `{` {
+			println('error: ${es}')
+		}
+	}
+	b.measure('msgpack.encode_to_json')
 
 	for _ in 0 .. max_iterations {
 		es := msgpack.encode[Person](p)
@@ -57,14 +67,12 @@ fn main() {
 			println('error: ${es}')
 		}
 	}
-	b.measure('msgpack.encode')
+	b.measure('msgpack.encode\n')
 
-	encoded := msgpack.encode[Person](p)
-	dump(encoded#[0..10])
-	mut decoder := msgpack.new_decoder()
-	for _ in 0 .. max_iterations {
-		// TODO: investigate why decoder.decode does not return a result at all :-|
-		decoder.decode(encoded)!
-	}
-	b.measure('msgpack.decode')
+	// Not working for now - waiting for #20027 be solved
+	// encoded := msgpack.encode[Person](p)
+	// for _ in 0 .. max_iterations {
+	// 	msgpack.decode[Person](encoded)!
+	// }
+	// b.measure('msgpack.decode')
 }
