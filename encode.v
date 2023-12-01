@@ -1,12 +1,11 @@
 module msgpack
 
-import strings
 import math
 import time
 
 struct Encoder {
 mut:
-	buffer strings.Builder = strings.new_builder(1024)
+	buffer []u8
 	config Config = default_config()
 }
 
@@ -114,9 +113,9 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 
 pub fn (mut e Encoder) encode_bool(b bool) {
 	if b {
-		e.buffer.write_u8(mp_true)
+		e.buffer << mp_true
 	} else {
-		e.buffer.write_u8(mp_false)
+		e.buffer << mp_false
 	}
 }
 
@@ -354,7 +353,9 @@ pub fn (mut e Encoder) write_map_start(length int) {
 }
 
 fn (mut e Encoder) write_string(s string) {
-	e.buffer.write_string(s)
+	if s.len > 0 {
+		unsafe { e.buffer.push_many(s.str, s.len) }
+	}
 }
 
 fn (mut e Encoder) write_u16(i u16) {
@@ -379,14 +380,14 @@ pub fn (mut e Encoder) write_f64(f f64) {
 
 // write byte array
 fn (mut e Encoder) write(b []u8) {
-	e.buffer.write(b) or { panic('write error') }
+	unsafe { e.buffer.push_many(b.bytestr().str, b.bytestr().len) }
 }
 
 // write one or more bytes
 fn (mut e Encoder) write_u8(b ...u8) {
 	if b.len > 1 {
-		e.write(b)
+		e.buffer << b
 	} else {
-		e.buffer.write_u8(b[0])
+		e.buffer << b[0]
 	}
 }

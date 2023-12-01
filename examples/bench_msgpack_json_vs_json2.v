@@ -4,18 +4,19 @@ import os
 import json
 import x.json2
 import msgpack
-import time
 import benchmark
+// import time
 
 struct Person {
-	name       string
-	age        int
-	created_at time.Time
+	name string
+	age  int
+	// created_at time.Time
 }
 
 fn main() {
-	max_iterations := os.getenv_opt('MAX_ITERATIONS') or { '1000' }.int()
-	s := '{"name":"Bilbo Baggins","age":99,"created_at":1670840340}'
+	max_iterations := os.getenv_opt('MAX_ITERATIONS') or { '1000000' }.int()
+	// s := '{"name":"Bilbo Baggins","age":99,"created_at":1670840340}'
+	s := '{"name":"Bilbo Baggins","age":99}'
 	mut b := benchmark.start()
 
 	for _ in 0 .. max_iterations {
