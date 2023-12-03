@@ -10,17 +10,20 @@ const msg_bad_desc = 'unrecognized descriptor byte'
 struct Decoder {
 	config Config = default_config()
 mut:
-	pos    int
-	buffer []u8
-	bd     u8 // actual buffer value
+	pos        int
+	buffer     []u8
+	bd         u8 // actual buffer value
+	char_count int
 }
 
-pub fn new_decoder() Decoder {
-	return Decoder{}
+pub fn new_decoder(src []u8) Decoder {
+	return Decoder{
+		buffer: src
+	}
 }
 
 pub fn decode_to_json[T](src []u8) !string {
-	mut d := new_decoder()
+	mut d := new_decoder(src)
 
 	json := d.decode_to_json[T](src) or { return error('error decoding to JSON: ${err}') }
 
@@ -28,7 +31,6 @@ pub fn decode_to_json[T](src []u8) !string {
 }
 
 pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
-	d.buffer = src
 	d.next()!
 
 	mut result := []u8{}
@@ -43,7 +45,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
 			array_len := d.read_array_len(data) or { return error('error reading array length') }
 
-			mut d_for_array := new_decoder()
+			mut d_for_array := new_decoder(src[1..])
 
 			result << `[`
 
@@ -52,7 +54,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 					result << `,`
 				}
 
-				element_json := d_for_array.decode_to_json[T](data[1..]) or {
+				element_json := d_for_array.decode_to_json[T](src[1..]) or {
 					return error('error converting array element to JSON ${err}')
 				}
 
@@ -87,6 +89,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 		}
 		mp_nil {
 			unsafe { result.push_many('null'.str, 'null'.len) }
+			// d.pos +=
 		}
 		mp_true, mp_false {
 			mut bool_val := false
@@ -106,6 +109,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
 			mut str_val := ''
 			d.decode_string(mut str_val) or { return error('error decoding string: ${err}') }
+			// TODO remove (result << `\"`) like in decode_to_json_using_fixed_buffer
 			result << `\"`
 			unsafe { result.push_many(str_val.str, str_val.len) }
 			result << `\"`
@@ -118,8 +122,26 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 
 			d.pos += bin_len
 		}
-		mp_ext_8, mp_ext_16, mp_ext_32 {}
-		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {}
+		mp_ext_8, mp_ext_16, mp_ext_32 {
+			// ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
+			// match ext_type {
+			//     else {
+			//         return error('unsupported extension type')
+			//     }
+			// }
+			// d.pos += ext_len
+		}
+		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {
+			// ext_len := int(d.bd - mp_fix_ext_1)
+			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
+			// match ext_type {
+			//     else {
+			//         return error('unsupported extension type')
+			//     }
+			// }
+			// d.pos += ext_len
+		}
 		else {
 			return error('unsupported descriptor byte for conversion to JSON')
 		}
@@ -127,10 +149,173 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 	return result.bytestr()
 }
 
+pub fn decode_to_json_using_fixed_buffer[T, F](src []u8, mut fixed_buf F) !string {
+	mut d := new_decoder(src)
+
+	json := d.decode_to_json_using_fixed_buffer[T, F](src, mut fixed_buf) or {
+		return error('error decoding to JSON: ${err}')
+	}
+
+	return json
+}
+
+pub fn (mut d Decoder) decode_to_json_using_fixed_buffer[T, F](src []u8, mut fixed_buf F) !string {
+	d.next()!
+
+	match d.bd {
+		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
+			array_len := d.read_array_len(src) or { return error('error reading array length') }
+
+			// mut d_for_array := new_decoder(src)
+
+			fixed_buf[d.char_count] = `[`
+
+			for i in 0 .. array_len {
+				if i > 0 {
+					fixed_buf[d.char_count] = `,`
+				}
+			}
+			fixed_buf[d.char_count] = `]`
+		}
+		mp_u8, mp_u16, mp_u32, mp_u64, mp_i8, mp_i16, mp_i32, mp_i64 {
+			mut int_val := 0
+			d.decode_integer(mut int_val) or { return error('error decoding integer: ${err}') }
+			for letter in int_val.str() {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+		}
+		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
+			data := d.buffer
+			// REVIEW - why it is slow??
+			str_len := d.read_str_len(data) or { return error('error reading string length') }
+
+			for letter in data[d.pos..d.pos + str_len] {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+			d.pos += str_len
+		}
+		mp_map_16, mp_map_32, mp_fix_map_min...mp_fix_map_max {
+			map_len := d.read_map_len(src) or { return error('error reading map length') }
+
+			fixed_buf[d.char_count] = `{`
+
+			d.char_count++
+
+			for map_idx in 0 .. map_len {
+				if map_idx > 0 {
+					fixed_buf[d.char_count] = `,`
+					d.char_count++
+				}
+
+				_ := d.decode_to_json_using_fixed_buffer[string, F](src, mut fixed_buf) or {
+					return error('error converting map key to JSON: ${err}')
+				}
+
+				fixed_buf[d.char_count] = `:`
+				d.char_count++
+
+				mut is_string := false
+				if d.buffer[d.pos] == mp_str_8 || d.buffer[d.pos] == mp_str_16
+					|| d.buffer[d.pos] == mp_str_32
+					|| (d.buffer[d.pos] >= mp_fix_str_min && d.buffer[d.pos] <= mp_fix_str_max) {
+					is_string = true
+					fixed_buf[d.char_count] = `"`
+					d.char_count++
+				}
+				_ := d.decode_to_json_using_fixed_buffer[string, F](src, mut fixed_buf) or {
+					return error('error converting map value to JSON')
+				}
+
+				if is_string {
+					fixed_buf[d.char_count] = `"`
+					d.char_count++
+				}
+			}
+
+			fixed_buf[d.char_count] = `}`
+			d.char_count++
+		}
+		mp_nil {
+			for letter in 'null' {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+			// d.pos +=
+		}
+		mp_true {
+			for letter in 'true' {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+			// d.pos +=
+		}
+		mp_false {
+			for letter in 'false' {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+			// d.pos +=
+		}
+		mp_f32, mp_f64 {
+			mut float_val := 0.0
+			d.decode_float(mut float_val) or { return error('error decoding float: ${err}') }
+			for letter in float_val.str() {
+				fixed_buf[d.char_count] = letter
+				d.char_count++
+			}
+		}
+		mp_bin_8, mp_bin_16, mp_bin_32 {
+			bin_len := d.read_bin_len(src) or { return error('error reading binary length') }
+			for i := 0; i < bin_len; i++ {
+				for letter in src[d.pos].str() {
+					fixed_buf[d.char_count] = letter
+					d.char_count++
+				}
+
+				d.pos++
+			}
+		}
+		mp_ext_8, mp_ext_16, mp_ext_32 {
+			// ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
+			// match ext_type {
+			//     else {
+			//         return error('unsupported extension type')
+			//     }
+			// }
+			// d.pos += ext_len
+		}
+		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {
+			// ext_len := int(d.bd - mp_fix_ext_1)
+			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
+			// match ext_type {
+			//     else {
+			//         return error('unsupported extension type')
+			//     }
+			// }
+			// d.pos += ext_len
+		}
+		else {
+			return error('unsupported descriptor byte for conversion to JSON')
+		}
+	}
+
+	mut result := []u8{len: d.char_count}
+	for id, variable in fixed_buf {
+		if id == d.char_count {
+			break
+		}
+		result[id] = variable
+	}
+	return result.bytestr()
+}
+
 pub fn decode[T](src []u8) !T {
 	mut val := T{}
 
-	mut d := new_decoder()
+	mut d := new_decoder(src)
 	d.decode[T](src, mut val) or { return error('error decoding data: ${err}') }
 
 	return val
@@ -141,7 +326,6 @@ pub fn (mut d Decoder) decode_from_string[T](data string) ! {
 }
 
 pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
-	d.buffer = data
 	d.next()!
 
 	$if T is $int {
@@ -260,7 +444,7 @@ pub fn (mut d Decoder) decode_array[T](mut val []T) ! {
 			array_len := d.read_array_len(data) or { return error('error reading array length') }
 			elements_buffer := data[1..]
 
-			mut d_for_array := new_decoder()
+			mut d_for_array := new_decoder(elements_buffer)
 
 			for _ in 0 .. array_len {
 				mut element := T{}
@@ -313,6 +497,7 @@ pub fn (mut d Decoder) decode_struct[T](mut val T) ! {
 
 pub fn (mut d Decoder) decode_bool[T](mut val T) ! {
 	val = d.bd == mp_true
+	// d.pos +=
 }
 
 pub fn (mut d Decoder) decode_time[T](mut val T) ! {

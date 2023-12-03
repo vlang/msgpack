@@ -3,8 +3,8 @@ module msgpack
 import math
 import time
 
-struct Encoder {
-mut:
+pub struct Encoder {
+pub mut:
 	buffer []u8
 	config Config = default_config()
 }
@@ -22,6 +22,18 @@ pub fn encode_to_json[T](data T) string {
 	mut encoder := new_encoder()
 	encoded := encoder.encode(data)
 	return decode_to_json[T](encoded) or { '' }
+}
+
+pub fn encode_to_json_using_fixed_buffer[T, F](data T, mut fixed_buf F) string {
+	mut encoder := new_encoder()
+	encoded := encoder.encode(data)
+
+	$if F is $array_fixed {
+		return decode_to_json_using_fixed_buffer[T, F](encoded, mut fixed_buf) or { '' }
+	} $else {
+		eprintln('fixed_buf need be a fixed array')
+		return ''
+	}
 }
 
 pub fn (e &Encoder) str() string {
