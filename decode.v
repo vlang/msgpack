@@ -112,7 +112,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			// TODO remove (result << `\"`) like in decode_to_json_using_fixed_buffer
 			result << `"`
 			unsafe { result.push_many(str_val.str, str_val.len) }
-			result << `\"`
+			result << `"`
 		}
 		mp_bin_8, mp_bin_16, mp_bin_32 {
 			bin_len := d.read_bin_len(src) or { return error('error reading binary length') }
