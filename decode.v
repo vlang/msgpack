@@ -190,7 +190,8 @@ pub fn (mut d Decoder) decode_to_json_using_fixed_buffer[T, F](src []u8, mut fix
 			// REVIEW - why it is slow??
 			str_len := d.read_str_len(data) or { return error('error reading string length') }
 
-			for letter in data[d.pos..d.pos + str_len] {
+			for i := d.pos; i < d.pos + str_len; i++ {
+				letter := data[i]
 				fixed_buf[d.char_count] = letter
 				d.char_count++
 			}
