@@ -122,25 +122,45 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 
 			d.pos += bin_len
 		}
-		mp_ext_8, mp_ext_16, mp_ext_32 {
-			// ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
-			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
-			// match ext_type {
-			//     else {
-			//         return error('unsupported extension type')
-			//     }
-			// }
-			// d.pos += ext_len
+		mp_ext_8 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
 		}
-		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {
-			// ext_len := int(d.bd - mp_fix_ext_1)
-			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
-			// match ext_type {
-			//     else {
-			//         return error('unsupported extension type')
-			//     }
-			// }
-			// d.pos += ext_len
+		mp_ext_16 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_ext_32 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_1 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_2 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_4 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_8 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_16 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
 		}
 		else {
 			return error('unsupported descriptor byte for conversion to JSON')
@@ -287,25 +307,45 @@ pub fn (mut d Decoder) decode_to_json_using_fixed_buffer[T, F](src []u8, mut fix
 				d.pos++
 			}
 		}
-		mp_ext_8, mp_ext_16, mp_ext_32 {
-			// ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
-			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
-			// match ext_type {
-			//     else {
-			//         return error('unsupported extension type')
-			//     }
-			// }
-			// d.pos += ext_len
+		mp_ext_8 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
 		}
-		mp_fix_ext_1, mp_fix_ext_2, mp_fix_ext_4, mp_fix_ext_8, mp_fix_ext_16 {
-			// ext_len := int(d.bd - mp_fix_ext_1)
-			// ext_type := d.read_ext_type(src) or { return error('error reading extension type') }
-			// match ext_type {
-			//     else {
-			//         return error('unsupported extension type')
-			//     }
-			// }
-			// d.pos += ext_len
+		mp_ext_16 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_ext_32 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_1 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_2 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_4 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_8 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
+		}
+		mp_fix_ext_16 {
+			ext_len := d.read_ext_len(src) or { return error('error reading extension length') }
+
+			d.pos += ext_len
 		}
 		else {
 			return error('unsupported descriptor byte for conversion to JSON')
@@ -640,6 +680,38 @@ fn (mut d Decoder) read_map_len(data []u8) !int {
 		}
 		else {
 			return error('invalid map length descriptor byte')
+		}
+	}
+}
+
+fn (mut d Decoder) read_ext_len(src []u8) !int {
+	match d.bd {
+		mp_ext_8 {
+			return int(src[d.pos])
+		}
+		mp_ext_16 {
+			return int(binary.big_endian_u16(src[d.pos + 1..d.pos + 3]))
+		}
+		mp_ext_32 {
+			return int(binary.big_endian_u32(src[d.pos + 1..d.pos + 5]))
+		}
+		mp_fix_ext_1 {
+			return 1
+		}
+		mp_fix_ext_2 {
+			return 2
+		}
+		mp_fix_ext_4 {
+			return 4
+		}
+		mp_fix_ext_8 {
+			return 8
+		}
+		mp_fix_ext_16 {
+			return 16
+		}
+		else {
+			return error('invalid extension length descriptor byte')
 		}
 	}
 }
