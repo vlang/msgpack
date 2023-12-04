@@ -110,7 +110,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			mut str_val := ''
 			d.decode_string(mut str_val) or { return error('error decoding string: ${err}') }
 			// TODO remove (result << `\"`) like in decode_to_json_using_fixed_buffer
-			result << `\"`
+			result << `"`
 			unsafe { result.push_many(str_val.str, str_val.len) }
 			result << `\"`
 		}
