@@ -16,9 +16,9 @@ fn main() {
 		name: 'Bilbo Baggins'
 		age: 99
 	}
-	// mut fixed_buf := [28]u8{}
-	mut fixed_buf := [29]u8{}
-	println(msgpack.encode_to_json_using_fixed_buffer(p, mut fixed_buf))
+
+	mut fixed_string_buf := [29]u8{}
+	msgpack.encode_to_json_using_fixed_buffer(p, mut fixed_string_buf)
 
 	max_iterations := os.getenv_opt('MAX_ITERATIONS') or { '1000000' }.int()
 

@@ -109,7 +109,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 		mp_str_8, mp_str_16, mp_str_32, mp_fix_str_min...mp_fix_str_max {
 			mut str_val := ''
 			d.decode_string(mut str_val) or { return error('error decoding string: ${err}') }
-			// TODO remove (result << `\"`) like in decode_to_json_using_fixed_buffer
+			// TODO remove (result << `"`) like in decode_to_json_using_fixed_buffer
 			result << `"`
 			unsafe { result.push_many(str_val.str, str_val.len) }
 			result << `"`
@@ -166,13 +166,22 @@ pub fn (mut d Decoder) decode_to_json_using_fixed_buffer[T, F](src []u8, mut fix
 		mp_array_16, mp_array_32, mp_fix_array_min...mp_fix_array_max {
 			array_len := d.read_array_len(src) or { return error('error reading array length') }
 
-			// mut d_for_array := new_decoder(src)
+			mut d_for_array := new_decoder(src[1..])
 
 			fixed_buf[d.char_count] = `[`
 
 			for i in 0 .. array_len {
 				if i > 0 {
 					fixed_buf[d.char_count] = `,`
+				}
+
+				element_json := d_for_array.decode_to_json[T](src[1..]) or {
+					return error('error converting array element to JSON ${err}')
+				}
+
+				for letter in element_json.str() {
+					fixed_buf[d.char_count] = letter
+					d.char_count++
 				}
 			}
 			fixed_buf[d.char_count] = `]`
