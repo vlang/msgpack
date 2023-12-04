@@ -89,7 +89,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 		}
 		mp_nil {
 			unsafe { result.push_many('null'.str, 'null'.len) }
-			// d.pos +=
+			d.pos += 1
 		}
 		mp_true, mp_false {
 			mut bool_val := false
@@ -252,21 +252,21 @@ pub fn (mut d Decoder) decode_to_json_using_fixed_buffer[T, F](src []u8, mut fix
 				fixed_buf[d.char_count] = letter
 				d.char_count++
 			}
-			// d.pos +=
+			d.pos += 1
 		}
 		mp_true {
 			for letter in 'true' {
 				fixed_buf[d.char_count] = letter
 				d.char_count++
 			}
-			// d.pos +=
+			d.pos += 1
 		}
 		mp_false {
 			for letter in 'false' {
 				fixed_buf[d.char_count] = letter
 				d.char_count++
 			}
-			// d.pos +=
+			d.pos += 1
 		}
 		mp_f32, mp_f64 {
 			mut float_val := 0.0
@@ -507,7 +507,7 @@ pub fn (mut d Decoder) decode_struct[T](mut val T) ! {
 
 pub fn (mut d Decoder) decode_bool[T](mut val T) ! {
 	val = d.bd == mp_true
-	// d.pos +=
+	d.pos += 1
 }
 
 pub fn (mut d Decoder) decode_time[T](mut val T) ! {
