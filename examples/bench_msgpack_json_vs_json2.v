@@ -1,3 +1,20 @@
+/*
+╰─ v doctor ─╯
+V full version: V 0.4.4 ed5c2f3.d5370bd
+OS: linux, Ubuntu 23.10
+Processor: 16 cpus, 64bit, little endian, AMD Ryzen 7 5800H with Radeon Graphics
+
+╰─ v -prod crun examples/bench_msgpack_json_vs_json2.v ─╯
+ SPENT   748.000 ms in json2.decode
+ SPENT   178.232 ms in json.decode
+
+ SPENT   300.852 ms in json2.encode
+ SPENT   433.072 ms in json.encode
+
+ SPENT   557.618 ms in msgpack.encode_to_json
+ SPENT   129.682 ms in msgpack.encode
+*/
+
 module main
 
 import os
