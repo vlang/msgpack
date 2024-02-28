@@ -1,7 +1,5 @@
 module msgpack
 
-import math
-
 // Spec: https://github.com/msgpack/msgpack/blob/master/spec.md
 // 7-bit positive integer
 const mp_pos_fix_int_min = u8(0x00)
@@ -97,7 +95,7 @@ const mp_time_ext_type = u8(-1)
 // container_len_unknown = -1
 // container_len_nil is length returned from read_(map|array)_len
 // when a 'nil' was encountered in the stream.
-const container_len_nil = math.min_i32
+const container_len_nil = min_i32
 
 struct RawExt {
 	tag u64

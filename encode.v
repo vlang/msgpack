@@ -123,10 +123,10 @@ pub fn (mut e Encoder) encode_bool(b bool) {
 pub fn (mut e Encoder) encode_int(i i64) {
 	if e.config.positive_int_unsigned && i >= 0 {
 		e.encode_uint(u64(i))
-	} else if i > math.max_i8 {
-		if i <= math.max_i16 {
+	} else if i > max_i8 {
+		if i <= max_i16 {
 			e.encode_i16(i16(i))
-		} else if i <= math.max_i32 {
+		} else if i <= max_i32 {
 			e.encode_i32(int(i))
 		} else {
 			e.encode_i64(i)
@@ -137,11 +137,11 @@ pub fn (mut e Encoder) encode_int(i i64) {
 		} else {
 			e.write_u8(u8(i))
 		}
-	} else if i >= math.min_i8 {
+	} else if i >= min_i8 {
 		e.encode_i8(i8(i))
-	} else if i >= math.min_i16 {
+	} else if i >= min_i16 {
 		e.encode_i16(i16(i))
-	} else if i >= math.min_i32 {
+	} else if i >= min_i32 {
 		e.encode_i32(int(i))
 	} else {
 		e.encode_i64(i)
@@ -150,17 +150,17 @@ pub fn (mut e Encoder) encode_int(i i64) {
 
 // encode using type just big enough to fit `i`
 pub fn (mut e Encoder) encode_uint(i u64) {
-	if i <= math.max_i8 {
+	if i <= max_i8 {
 		if e.config.no_fixed_num {
 			e.encode_u8(u8(i))
 		} else {
 			e.write_u8(u8(i))
 		}
-	} else if i <= math.max_u8 {
+	} else if i <= max_u8 {
 		e.encode_u8(u8(i))
-	} else if i <= math.max_u16 {
+	} else if i <= max_u16 {
 		e.encode_u16(u16(i))
-	} else if i <= math.max_u32 {
+	} else if i <= max_u32 {
 		e.encode_u32(u32(i))
 	} else {
 		e.encode_u64(u64(i))
