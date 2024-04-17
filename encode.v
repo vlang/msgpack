@@ -264,7 +264,7 @@ pub fn (mut e Encoder) encode_time(t time.Time) {
 	} else {
 		e.write_container_len(container_raw_legacy, 4)
 	}
-	e.write_u32(u32(t.unix))
+	e.write_u32(u32(t.unix()))
 	// NOTE: automatically use the best storage depending if we need nanosecond
 	// precision or not. time.Time doesn't support nanosecond currently (I think)
 	//
