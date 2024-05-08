@@ -1,0 +1,26 @@
+# Binaries for programs and plugins
+main
+msgpack
+*.exe
+*.exe~
+*.so
+*.dylib
+*.dll
+
+# Ignore binary output folders
+bin/
+
+# Ignore common editor/system specific metadata
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# ENV
+.env
+
+# vweb and database
+*.db
+*.js
+examples/basic
+examples/bench_msgpack_json_vs_json2
