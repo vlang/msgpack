@@ -4,8 +4,8 @@ import msgpack
 import time
 
 pub struct TestStructA {
-	field_a int         @[codec: 'codecdata1']
-	field_b string      @[codec: 'codecdata2']
+	field_a int    @[codec: 'codecdata1']
+	field_b string @[codec: 'codecdata2']
 	field_c TestStructB
 	field_d []string
 	// TODO: fix compiler (comptime generic infer)
