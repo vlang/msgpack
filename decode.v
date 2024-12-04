@@ -368,7 +368,7 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 				}
 				data32 := binary.big_endian_u32(data[d.pos + 1 + 4..d.pos + 12])
 				data64 := binary.big_endian_u64(data[d.pos + 1 + 8..d.pos + 12])
-				val = time.unix_nanosecond(i64(data64), data32)
+				val = time.unix_nanosecond(i64(data64), int(data32))
 				d.pos += 12
 			}
 			else {
