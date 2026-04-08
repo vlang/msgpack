@@ -171,35 +171,35 @@ pub fn (mut d Decoder) decode_integer[T](mut val T) ! {
 	data := d.buffer
 	match d.bd {
 		mp_u8 {
-			val = data[d.pos]
+			val = T(data[d.pos])
 			d.pos++
 		}
 		mp_u16 {
-			val = u64(binary.big_endian_u16(data[d.pos..d.pos + 2]))
+			val = T(binary.big_endian_u16(data[d.pos..d.pos + 2]))
 			d.pos += 2
 		}
 		mp_u32 {
-			val = u64(int(binary.big_endian_u32(data[d.pos..d.pos + 4])))
+			val = T(binary.big_endian_u32(data[d.pos..d.pos + 4]))
 			d.pos += 4
 		}
 		mp_u64 {
-			val = u64(binary.big_endian_u64(data[d.pos..d.pos + 8]))
+			val = T(binary.big_endian_u64(data[d.pos..d.pos + 8]))
 			d.pos += 8
 		}
 		mp_i8 {
-			val = i64(data[d.pos])
+			val = T(i8(data[d.pos]))
 			d.pos++
 		}
 		mp_i16 {
-			val = i64(i16(binary.big_endian_u16(data[d.pos..d.pos + 2])))
+			val = T(i16(binary.big_endian_u16(data[d.pos..d.pos + 2])))
 			d.pos += 2
 		}
 		mp_i32 {
-			val = i64(i32(binary.big_endian_u32(data[d.pos..d.pos + 4])))
+			val = T(i32(binary.big_endian_u32(data[d.pos..d.pos + 4])))
 			d.pos += 4
 		}
 		mp_i64 {
-			val = i64(binary.big_endian_u64(data[d.pos..d.pos + 8]))
+			val = T(binary.big_endian_u64(data[d.pos..d.pos + 8]))
 			d.pos += 8
 		}
 		else {
@@ -212,11 +212,11 @@ pub fn (mut d Decoder) decode_float[T](mut val T) ! {
 	data := d.buffer
 	match d.bd {
 		mp_f32 {
-			val = math.f32_from_bits(binary.big_endian_u32(data[1..4]))
+			val = T(math.f32_from_bits(binary.big_endian_u32(data[1..4])))
 			d.pos += 4
 		}
 		mp_f64 {
-			val = math.f64_from_bits(binary.big_endian_u64(data[1..8]))
+			val = T(math.f64_from_bits(binary.big_endian_u64(data[1..8])))
 			d.pos += 8
 		}
 		else {
