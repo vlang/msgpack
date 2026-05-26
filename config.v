@@ -37,6 +37,7 @@ struct Config {
 
 pub fn default_config() Config {
 	return Config{
-		write_ext: true
+		write_ext:             true
+		positive_int_unsigned: true
 	}
 }

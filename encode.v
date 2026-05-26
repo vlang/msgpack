@@ -38,25 +38,24 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 	} $else $if T is bool {
 		e.encode_bool(data)
 	}
-	// TODO: if int encode_int, if uint encode_uint
-	// instead of needing to check each type, also
-	// then we will be using the smallest storage
 	$else $if T is i8 {
-		e.encode_i8(data)
+		e.encode_int(i64(data))
 	} $else $if T is i16 {
-		e.encode_i16(data)
+		e.encode_int(i64(data))
 	} $else $if T is int {
-		e.encode_i32(data)
+		e.encode_int(i64(data))
+	} $else $if T is i32 {
+		e.encode_int(i64(data))
 	} $else $if T is i64 {
-		e.encode_i64(data)
+		e.encode_int(data)
 	} $else $if T is u8 {
-		e.encode_u8(data)
+		e.encode_uint(u64(data))
 	} $else $if T is u16 {
-		e.encode_u16(data)
+		e.encode_uint(u64(data))
 	} $else $if T is u32 {
-		e.encode_u32(data)
+		e.encode_uint(u64(data))
 	} $else $if T is u64 {
-		e.encode_u64(data)
+		e.encode_uint(data)
 	} $else $if T is f32 {
 		e.encode_f32(data)
 	} $else $if T is f64 {

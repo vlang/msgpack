@@ -98,6 +98,14 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			d.decode_float(mut float_val) or { return error('error decoding float: ${err}') }
 			unsafe { result.push_many(float_val.str().str, float_val.str().len) }
 		}
+		mp_pos_fix_int_min...mp_pos_fix_int_max {
+			int_val := int(d.bd)
+			unsafe { result.push_many(int_val.str().str, int_val.str().len) }
+		}
+		mp_neg_fix_int_min...mp_neg_fix_int_max {
+			int_val := int(i8(d.bd))
+			unsafe { result.push_many(int_val.str().str, int_val.str().len) }
+		}
 		mp_u8, mp_u16, mp_u32, mp_u64, mp_i8, mp_i16, mp_i32, mp_i64 {
 			mut int_val := 0
 			d.decode_integer(mut int_val) or { return error('error decoding integer: ${err}') }
@@ -170,6 +178,12 @@ pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 pub fn (mut d Decoder) decode_integer[T](mut val T) ! {
 	data := d.buffer
 	match d.bd {
+		mp_pos_fix_int_min...mp_pos_fix_int_max {
+			val = T(d.bd)
+		}
+		mp_neg_fix_int_min...mp_neg_fix_int_max {
+			val = T(i8(d.bd))
+		}
 		mp_u8 {
 			val = T(data[d.pos])
 			d.pos++
