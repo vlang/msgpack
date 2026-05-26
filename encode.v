@@ -231,6 +231,7 @@ pub fn (mut e Encoder) encode_string(s string) {
 			container_raw_legacy
 		}
 	}
+
 	e.write_container_len(ct, s.len)
 	if s.len > 0 {
 		e.write_string(s)
