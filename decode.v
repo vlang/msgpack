@@ -86,7 +86,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			result << `}`
 		}
 		mp_nil {
-			unsafe { result.push_many('null'.str, 'null'.len) }
+			unsafe { result.push_many(c'null', 'null'.len) }
 		}
 		mp_true, mp_false {
 			mut bool_val := false
@@ -132,6 +132,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			return error('unsupported descriptor byte for conversion to JSON')
 		}
 	}
+
 	return result.bytestr()
 }
 

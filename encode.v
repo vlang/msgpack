@@ -37,8 +37,7 @@ pub fn (mut e Encoder) encode[T](data T) []u8 {
 		e.encode_string(data)
 	} $else $if T is bool {
 		e.encode_bool(data)
-	}
-	$else $if T is i8 {
+	} $else $if T is i8 {
 		e.encode_int(i64(data))
 	} $else $if T is i16 {
 		e.encode_int(i64(data))
@@ -230,6 +229,7 @@ pub fn (mut e Encoder) encode_string(s string) {
 			container_raw_legacy
 		}
 	}
+
 	e.write_container_len(ct, s.len)
 	if s.len > 0 {
 		e.write_string(s)
