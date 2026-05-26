@@ -40,8 +40,11 @@ fn test_decoding() {
 	// }
 	// assert msgpack.decode[map[string]string](hex.decode('80')!)! == {} // Test empty map
 
-	// // Test decoding structs
-	// assert msgpack.decode[Struct](hex.decode('82a161a44a6f686ea162d20000001e')!)! == Struct{'John', 30}
+	// Test decoding structs
+	assert msgpack.decode[Struct](hex.decode('82a161a44a6f686ea162d20000001e')!)! == Struct{'John', 30}
+	// Round-trip (works regardless of which integer width the encoder picks)
+	assert msgpack.decode[Struct](msgpack.encode(Struct{'John', 30}))! == Struct{'John', 30}
+	assert msgpack.decode[Struct](msgpack.encode(Struct{'', 0}))! == Struct{'', 0}
 
 	// Test decoding booleans
 	assert msgpack.decode[bool](hex.decode('c3')!)! == true

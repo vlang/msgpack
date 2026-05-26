@@ -86,7 +86,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			result << `}`
 		}
 		mp_nil {
-			unsafe { result.push_many('null'.str, 'null'.len) }
+			unsafe { result.push_many(c'null', 'null'.len) }
 		}
 		mp_true, mp_false {
 			mut bool_val := false
@@ -124,6 +124,7 @@ pub fn (mut d Decoder) decode_to_json[T](src []u8) !string {
 			return error('unsupported descriptor byte for conversion to JSON')
 		}
 	}
+
 	return result.bytestr()
 }
 
@@ -143,7 +144,14 @@ pub fn (mut d Decoder) decode_from_string[T](data string) ! {
 pub fn (mut d Decoder) decode[T](data []u8, mut val T) ! {
 	d.buffer = data
 	d.next()!
+	d.decode_value[T](mut val)!
+}
 
+// decode_value dispatches to the type-specific decoder for the descriptor byte
+// already loaded into d.bd by a prior next() call. It does NOT reset d.buffer
+// or d.pos, so it is safe to use from inside container decoders (struct, map,
+// array) that must preserve their position within the buffer.
+fn (mut d Decoder) decode_value[T](mut val T) ! {
 	$if T is $int {
 		d.decode_integer[T](mut val) or { return error('error decoding integer: ${err}') }
 	} $else $if T is $float {
@@ -300,14 +308,44 @@ pub fn (mut d Decoder) decode_map[T](mut val T) ! {
 }
 
 pub fn (mut d Decoder) decode_struct[T](mut val T) ! {
-	data := d.buffer
-	$for field in T.fields {
-		// Decode each field using its type
-		mut field_val := val.$(field.name)
-		d.decode(data[d.pos..], mut field_val) or {
-			return error('error decoding struct field: ${field.name}')
+	map_len := d.read_map_len(d.buffer) or { return error('error reading map length') }
+	// read_map_len leaves d.pos at the position after the map header byte;
+	// for map_16 / map_32 we must also skip the explicit length bytes.
+	match d.bd {
+		mp_map_16 { d.pos += 2 }
+		mp_map_32 { d.pos += 4 }
+		else {}
+	}
+
+	for _ in 0 .. map_len {
+		// Read key (msgpack-encoded string).
+		d.next()!
+		mut key := ''
+		d.decode_string(mut key) or { return error('error decoding struct field key') }
+		// Read the value's descriptor byte and dispatch by matching field name
+		// (honoring `@[codec: 'alias']` attrs the encoder writes).
+		d.next()!
+		mut found := false
+		$for field in T.fields {
+			mut codec_attr := ''
+			for attr in field.attrs {
+				if attr.starts_with('codec:') {
+					codec_attr = attr.all_after('codec:').trim_space()
+					break
+				}
+			}
+			if !found && (key == field.name || (codec_attr.len > 0 && key == codec_attr)) {
+				mut field_val := val.$(field.name)
+				d.decode_value(mut field_val) or {
+					return error('error decoding struct field: ${field.name}: ${err}')
+				}
+				val.$(field.name) = field_val
+				found = true
+			}
 		}
-		val[field.name] = field_val
+		if !found {
+			return error('unknown struct field: ${key}')
+		}
 	}
 }
 
