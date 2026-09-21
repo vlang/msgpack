@@ -5,10 +5,22 @@ import time
 // encode serializes `val` to MessagePack.
 //
 // Supported types: bool, integers, floats, string, []u8 (as bin), arrays,
-// fixed arrays, maps, structs (as maps keyed by field name, or by the name
-// given with `@[codec: 'name']`), enums, Options (`none` is nil), `time.Time`
+// fixed arrays, maps, structs, enums, Options (`none` is nil), `time.Time`
 // (as a timestamp), type aliases of these, and `Value`, `Ext`, `Timestamp`.
 // Using another type is a compile-time error.
+//
+// A struct is written as a map from field names to values. Attributes
+// change how a field is written:
+//   - `@[msgpack: 'name']` uses another key (`@[codec: 'name']` also works)
+//   - `@[skip]` or `@[msgpack: '-']` leaves the field out
+//   - `@[omitempty]` leaves the field out when it is none, zero, false or
+//     empty
+//   - `@[required]` makes decoding fail when the field is missing
+// and on the struct itself:
+//   - `@[msgpack_rename_all: 'camelCase']` renames every field; also
+//     `snake_case`, `PascalCase`, `kebab-case` and `SCREAMING_SNAKE_CASE`
+//   - `@[msgpack_as_array]` writes the fields as an array, in declaration
+//     order, like rmp-serde and the `as_array` option of Go libraries
 pub fn encode[T](val T, opts EncodeOpts) ![]u8 {
 	mut p := new_packer(opts)
 	p.pack(val)!
@@ -379,6 +391,12 @@ fn with_path(err IError, segment string) IError {
 	match err {
 		TypeMismatchError {
 			return TypeMismatchError{
+				...err
+				path: join_path(segment, err.path)
+			}
+		}
+		MissingFieldError {
+			return MissingFieldError{
 				...err
 				path: join_path(segment, err.path)
 			}

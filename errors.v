@@ -101,6 +101,22 @@ pub fn (e &UnknownFieldError) msg() string {
 	return 'msgpack: ${path_prefix(e.path)}unknown field "${e.name}" at offset ${e.pos}'
 }
 
+// MissingFieldError is returned by struct decoding when a field marked
+// `@[required]` is absent.
+pub struct MissingFieldError {
+	Error
+pub:
+	pos  int
+	name string
+pub mut:
+	path string
+}
+
+// msg formats the error for `IError.msg()`.
+pub fn (e &MissingFieldError) msg() string {
+	return 'msgpack: ${path_prefix(e.path)}missing required field "${e.name}" in the map at offset ${e.pos}'
+}
+
 // DuplicateKeyError is returned when `DecodeOpts.deny_duplicate_keys` is set
 // and a map or struct contains the same key twice.
 pub struct DuplicateKeyError {
