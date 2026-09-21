@@ -21,6 +21,9 @@ pub:
 	// allow_trailing_bytes lets `decode` ignore bytes left after the first
 	// value. By default they are an error.
 	allow_trailing_bytes bool
+	// max_buffer_size bounds the bytes a StreamDecoder buffers to complete one
+	// value, so that a declared length cannot exhaust memory.
+	max_buffer_size int = 100 * 1024 * 1024
 }
 
 // Kind classifies the next value without consuming it.
