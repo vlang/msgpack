@@ -6,8 +6,9 @@ import time
 //
 // Supported types: bool, integers, floats, string, []u8 (as bin), arrays,
 // fixed arrays, maps, structs, enums, Options (`none` is nil), `time.Time`
-// (as a timestamp), type aliases of these, and `Value`, `Ext`, `Timestamp`.
-// Using another type is a compile-time error.
+// (as a timestamp), type aliases of these, and `Value`, `Ext`, `Timestamp`,
+// `RawMessage`. Types implementing `Marshaler` and `Unmarshaler` choose their
+// own representation. Using another type is a compile-time error.
 //
 // A struct is written as a map from field names to values. Attributes
 // change how a field is written:
@@ -41,7 +42,11 @@ pub fn decode[T](data []u8, opts DecodeOpts) !T {
 // pack writes `val`, choosing the MessagePack type from the V type at
 // compile time. See `encode` for the supported types.
 pub fn (mut p Packer) pack[T](val T) ! {
-	$if T is Value {
+	$if T is RawMessage {
+		p.pack_raw(val)!
+	} $else $if T is Marshaler {
+		p.pack_marshaler(val)!
+	} $else $if T is Value {
 		p.pack_value(val)!
 	} $else $if T is Ext {
 		p.pack_ext(val.type_id, val.data)!
@@ -157,7 +162,11 @@ pub fn (mut u Unpacker) unpack[T]() !T {
 }
 
 fn (mut u Unpacker) read[T]() !T {
-	$if T is Value {
+	$if T is RawMessage {
+		return u.unpack_raw()!
+	} $else $if T is Unmarshaler {
+		return u.read_unmarshaler[T]()!
+	} $else $if T is Value {
 		return u.read_value()!
 	} $else $if T is Ext {
 		return u.unpack_ext()!
