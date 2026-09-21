@@ -9,6 +9,13 @@ pub struct EncodeOpts {
 pub:
 	// initial_cap is the buffer capacity reserved up front, in bytes.
 	initial_cap int = 128
+	// sort_keys writes the entries of V maps with string keys in ascending
+	// byte order, so that equal maps always encode to the same bytes.
+	sort_keys bool
+	// enum_as_string writes enum values as their name instead of their
+	// integer value. Flag enums are always written as integers, since a
+	// combination of flags has no name.
+	enum_as_string bool
 }
 
 // Packer writes MessagePack values into a growable buffer. Integers,

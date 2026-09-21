@@ -42,25 +42,19 @@ fn main() {
 	b.measure('json2.encode\n')
 
 	for _ in 0 .. max_iterations {
-		es := msgpack.encode_to_json[Person](p)
-		if es[0] != `{` {
-			println('error: ${es}')
-		}
-	}
-	b.measure('msgpack.encode_to_json')
-
-	for _ in 0 .. max_iterations {
-		es := msgpack.encode[Person](p)
+		es := msgpack.encode[Person](p)!
 		if p.age != 99 {
 			println('error: ${es}')
 		}
 	}
 	b.measure('msgpack.encode\n')
 
-	// Not working for now - waiting for #20027 be solved
-	// encoded := msgpack.encode[Person](p)
-	// for _ in 0 .. max_iterations {
-	// 	msgpack.decode[Person](encoded)!
-	// }
-	// b.measure('msgpack.decode')
+	encoded := msgpack.encode[Person](p)!
+	for _ in 0 .. max_iterations {
+		d := msgpack.decode[Person](encoded)!
+		if d.age != 99 {
+			println('error: ${d.name}')
+		}
+	}
+	b.measure('msgpack.decode')
 }
