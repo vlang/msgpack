@@ -4,24 +4,24 @@ import encoding.hex
 import msgpack
 
 struct Account {
-	id       int      @[msgpack: 'i']
-	name     string   @[codec: 'n']
+	id       int      @[msgpack.Key: 'i']
+	name     string   @[msgpack.Key: 'n']
 	password string   @[skip]
-	token    string   @[msgpack: '-']
+	token    string   @[msgpack.Key: '-']
 	note     string   @[omitempty]
 	tags     []string @[omitempty]
 	parent   ?int     @[omitempty]
 	owner    string   @[required]
 }
 
-@[msgpack_rename_all: 'camelCase']
+@[msgpack.RenameAll: 'camelCase']
 struct Profile {
 	first_name   string
 	last_name    string
-	home_address string @[msgpack: 'addr']
+	home_address string @[msgpack.Key: 'addr']
 }
 
-@[msgpack_as_array]
+@[msgpack.AsArray]
 struct Pixel {
 	x     u16
 	y     u16
@@ -113,8 +113,8 @@ fn test_as_array_nested_in_a_map() {
 }
 
 struct Clash {
-	a int @[msgpack: 'k']
-	b int @[msgpack: 'k']
+	a int @[msgpack.Key: 'k']
+	b int @[msgpack.Key: 'k']
 }
 
 fn test_fields_with_the_same_key_are_rejected() {
@@ -130,7 +130,7 @@ fn test_fields_with_the_same_key_are_rejected() {
 	}
 }
 
-@[msgpack_rename_all: 'camelCase']
+@[msgpack.RenameAll: 'camelCase']
 struct Shared {
 	first_field  int
 	second_field string @[omitempty]

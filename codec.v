@@ -12,15 +12,15 @@ import time
 //
 // A struct is written as a map from field names to values. Attributes
 // change how a field is written:
-//   - `@[msgpack: 'name']` uses another key (`@[codec: 'name']` also works)
-//   - `@[skip]` or `@[msgpack: '-']` leaves the field out
+//   - `@[msgpack.Key: 'name']` uses another key
+//   - `@[skip]` or `@[msgpack.Key: '-']` leaves the field out
 //   - `@[omitempty]` leaves the field out when it is none, zero, false or
 //     empty
 //   - `@[required]` makes decoding fail when the field is missing
 // and on the struct itself:
-//   - `@[msgpack_rename_all: 'camelCase']` renames every field; also
+//   - `@[msgpack.RenameAll: 'camelCase']` renames every field; also
 //     `snake_case`, `PascalCase`, `kebab-case` and `SCREAMING_SNAKE_CASE`
-//   - `@[msgpack_as_array]` writes the fields as an array, in declaration
+//   - `@[msgpack.AsArray]` writes the fields as an array, in declaration
 //     order, like rmp-serde and the `as_array` option of Go libraries
 pub fn encode[T](val T, opts EncodeOpts) ![]u8 {
 	mut p := new_packer(opts)

@@ -4,8 +4,8 @@ import msgpack
 import time
 
 pub struct TestStructA {
-	field_a int    @[codec: 'codecdata1']
-	field_b string @[codec: 'codecdata2']
+	field_a int    @[msgpack.Key: 'codecdata1']
+	field_b string @[msgpack.Key: 'codecdata2']
 	field_c TestStructB
 	field_d []string
 	field_e map[string]int
@@ -15,8 +15,8 @@ pub struct TestStructA {
 }
 
 pub struct TestStructB {
-	field_a int    @[codec: 'codecdata1']
-	field_b string @[codec: 'codecdata2']
+	field_a int    @[msgpack.Key: 'codecdata1']
+	field_b string @[msgpack.Key: 'codecdata2']
 }
 
 fn main() {

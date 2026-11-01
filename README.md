@@ -74,9 +74,9 @@ represent, such as a sum type, is a compile-time error.
 ```v
 import msgpack
 
-@[msgpack_rename_all: 'camelCase']
+@[msgpack.RenameAll: 'camelCase']
 struct Account {
-	id        int    @[msgpack: 'ID']
+	id        int    @[msgpack.Key: 'ID']
 	username  string @[required]
 	password  string @[skip]
 	nickname  string @[omitempty]
@@ -92,15 +92,17 @@ fn main() {
 
 | Attribute | Effect |
 | --- | --- |
-| `@[msgpack: 'name']` | uses another key (`@[codec: 'name']` works too) |
-| `@[skip]`, `@[msgpack: '-']` | leaves the field out |
+| `@[msgpack.Key: 'name']` | uses another key |
+| `@[skip]`, `@[msgpack.Key: '-']` | leaves the field out |
 | `@[omitempty]` | leaves the field out when it is none, zero, false or empty |
 | `@[required]` | decoding fails if the field is missing |
-| `@[msgpack_rename_all: 'camelCase']` | on the struct: renames every field |
-| `@[msgpack_as_array]` | on the struct: writes the fields as an array, in order |
+| `@[msgpack.RenameAll: 'camelCase']` | on the struct: renames every field |
+| `@[msgpack.AsArray]` | on the struct: writes the fields as an array, in order |
 
-`msgpack_rename_all` also accepts `PascalCase`, `kebab-case` and `SCREAMING_SNAKE_CASE`.
-`@[msgpack_as_array]` gives a more compact encoding, and matches the default of Rust's
+The `msgpack.*` attributes are declared as attribute schemas, so the compiler checks them;
+they are written qualified by the module name.
+`msgpack.RenameAll` also accepts `PascalCase`, `kebab-case` and `SCREAMING_SNAKE_CASE`.
+`@[msgpack.AsArray]` gives a more compact encoding, and matches the default of Rust's
 rmp-serde. When decoding a struct, keys that match no field are skipped.
 
 ## Errors

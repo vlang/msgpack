@@ -49,7 +49,7 @@ struct User {
 	perms    Perm
 	avatar   []u8
 	created  time.Time
-	nickname string @[codec: 'nick']
+	nickname string @[msgpack.Key: 'nick']
 }
 
 fn sample_user() User {

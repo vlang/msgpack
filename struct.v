@@ -104,9 +104,9 @@ fn new_struct_info[T]() &StructInfo {
 	mut as_array := false
 	mut rename := ''
 	$for attr in T.attributes {
-		if attr.name == 'msgpack_as_array' {
+		if attr.name == 'msgpack.AsArray' {
 			as_array = true
-		} else if attr.name == 'msgpack_rename_all' {
+		} else if attr.name == 'msgpack.RenameAll' {
 			rename = attr.arg
 		}
 	}
@@ -160,7 +160,7 @@ fn field_opts(name string, attrs []string, rename string) FieldOpts {
 			omitempty = true
 		} else if attr == 'required' {
 			required = true
-		} else if attr.starts_with('msgpack:') || attr.starts_with('codec:') {
+		} else if attr.starts_with('msgpack.Key:') {
 			v := attr_value(attr)
 			if v == '-' {
 				skip = true
@@ -353,7 +353,7 @@ fn (mut u Unpacker) unpack_struct_into[T](mut out T) ! {
 	u.depth--
 }
 
-// unpack_struct_array_into reads a struct written with `@[msgpack_as_array]`:
+// unpack_struct_array_into reads a struct written with `@[msgpack.AsArray]`:
 // one element per field that is not skipped, in declaration order. Missing
 // trailing elements leave their fields unchanged, extra elements are skipped.
 fn (mut u Unpacker) unpack_struct_array_into[T](mut out T, info &StructInfo) ! {
@@ -404,7 +404,7 @@ fn (mut u Unpacker) unpack_struct_array_into[T](mut out T, info &StructInfo) ! {
 }
 
 // rename_field converts a V field name (snake_case) for
-// `@[msgpack_rename_all]`.
+// `@[msgpack.RenameAll]`.
 fn rename_field(name string, strategy string) string {
 	return match strategy {
 		'camelCase' { camel_case(name, false) }
