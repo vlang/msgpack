@@ -86,6 +86,8 @@ pub fn (mut p Packer) pack[T](val T) ! {
 		p.pack_uint(u64(val))
 	} $else $if T.unaliased_typ is usize {
 		p.pack_uint(u64(val))
+	} $else $if T.unaliased_typ is uint {
+		p.pack_uint(u64(val))
 	} $else $if T.unaliased_typ is f32 {
 		p.pack_f32(f32(val))
 	} $else $if T.unaliased_typ is f64 {
@@ -189,7 +191,8 @@ fn (mut u Unpacker) read[T]() !T {
 	} $else $if T.unaliased_typ is i64 {
 		return T(u.unpack_int()!)
 	} $else $if T.unaliased_typ is isize {
-		return T(isize(u.unpack_int_in('isize', i64(min_isize), i64(max_isize))!))
+		lo, hi := signed_bounds(sizeof(T))
+		return T(u.unpack_int_in('isize', lo, hi)!)
 	} $else $if T.unaliased_typ is u8 {
 		return T(u8(u.unpack_uint_to('u8', max_u8)!))
 	} $else $if T.unaliased_typ is u16 {
@@ -199,7 +202,9 @@ fn (mut u Unpacker) read[T]() !T {
 	} $else $if T.unaliased_typ is u64 {
 		return T(u.unpack_uint()!)
 	} $else $if T.unaliased_typ is usize {
-		return T(usize(u.unpack_uint_to('usize', u64(max_usize))!))
+		return T(u.unpack_uint_to('usize', unsigned_max(sizeof(T)))!)
+	} $else $if T.unaliased_typ is uint {
+		return T(u.unpack_uint_to('uint', unsigned_max(sizeof(T)))!)
 	} $else $if T.unaliased_typ is f32 {
 		return T(u.unpack_f32()!)
 	} $else $if T.unaliased_typ is f64 {
@@ -439,4 +444,23 @@ fn join_path(segment string, rest string) string {
 		return segment
 	}
 	return if rest.starts_with('[') { segment + rest } else { '${segment}.${rest}' }
+}
+
+// signed_bounds returns the range of a signed integer type `size` bytes wide.
+// The platform-width types are bounded by their actual size rather than by
+// named constants, which do not exist for every width.
+fn signed_bounds(size u32) (i64, i64) {
+	if size >= 8 {
+		return min_i64, max_i64
+	}
+	half := i64(1) << (size * 8 - 1)
+	return -half, half - 1
+}
+
+// unsigned_max returns the largest value of an unsigned integer type `size` bytes wide.
+fn unsigned_max(size u32) u64 {
+	if size >= 8 {
+		return max_u64
+	}
+	return (u64(1) << (size * 8)) - 1
 }

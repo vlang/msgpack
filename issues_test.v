@@ -90,7 +90,7 @@ fn test_msgpack_12_struct_decode_round_trip() {
 }
 
 // vlang/msgpack#12 — full code path from the bug report, including the
-// json.decode → msgpack.encode → msgpack.decode pipeline the reporter used.
+// json2.decode → msgpack.encode → msgpack.decode pipeline the reporter used.
 fn test_msgpack_12_json_to_msgpack_round_trip() {
 	data := '{"used_ids": 1}'
 	json_data := json2.decode[UsedIdsMap](data)!

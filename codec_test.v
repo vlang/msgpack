@@ -103,6 +103,19 @@ fn test_primitives_round_trip() {
 	assert msgpack.decode[UserId](msgpack.encode(UserId(7))!)! == 7
 }
 
+fn test_platform_width_unsigned_round_trip() {
+	// uint is as wide as a pointer, so its largest value depends on the target.
+	largest := if sizeof(uint) == 8 { uint(max_u64) } else { uint(max_u32) }
+	assert msgpack.decode[uint](msgpack.encode(largest)!)! == largest
+	assert msgpack.decode[uint](msgpack.encode(uint(0))!)! == 0
+	if sizeof(uint) == 4 {
+		msgpack.decode[uint](msgpack.encode(u64(max_u32) + 1)!) or { return }
+		assert false, 'a value above the range of uint was accepted'
+	}
+	msgpack.decode[uint](msgpack.encode(-1)!) or { return }
+	assert false, 'a negative value was decoded into uint'
+}
+
 fn test_containers_round_trip() {
 	nested := [[1, 2], [3], []int{}]
 	assert msgpack.decode[[][]int](msgpack.encode(nested)!)! == nested
