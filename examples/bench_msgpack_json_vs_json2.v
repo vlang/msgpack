@@ -1,27 +1,13 @@
-/*
-╰─ v doctor ─╯
-V full version: V 0.4.4 ed5c2f3.d5370bd
-OS: linux, Ubuntu 23.10
-Processor: 16 cpus, 64bit, little endian, AMD Ryzen 7 5800H with Radeon Graphics
-
-╰─ v -prod crun examples/bench_msgpack_json_vs_json2.v ─╯
- SPENT   748.000 ms in json2.decode
- SPENT   178.232 ms in json.decode
-
- SPENT   300.852 ms in json2.encode
- SPENT   433.072 ms in json.encode
-
- SPENT   557.618 ms in msgpack.encode_to_json
- SPENT   129.682 ms in msgpack.encode
-*/
+// Compare MessagePack with V's current JSON codec.
+// Run with: v -prod run examples/bench_msgpack_json_vs_json2.v
 
 module main
 
 import os
-import json
-import x.json2
+import json2
 import msgpack
 import benchmark
+
 // import time
 
 struct Person {
@@ -42,18 +28,10 @@ fn main() {
 			println('error: ${p}')
 		}
 	}
-	b.measure('json2.decode')
-
-	for _ in 0 .. max_iterations {
-		p := json.decode(Person, s)!
-		if p.age != 99 {
-			println('error: ${p}')
-		}
-	}
-	b.measure('json.decode\n')
+	b.measure('json2.decode\n')
 
 	// encoding measurements:
-	p := json.decode(Person, s)!
+	p := json2.decode[Person](s)!
 
 	for _ in 0 .. max_iterations {
 		es := json2.encode(p)
@@ -61,15 +39,7 @@ fn main() {
 			println('json2.encode error: ${es}')
 		}
 	}
-	b.measure('json2.encode')
-
-	for _ in 0 .. max_iterations {
-		es := json.encode(p)
-		if es[0] != `{` {
-			println('json.encode error: ${es}')
-		}
-	}
-	b.measure('json.encode\n')
+	b.measure('json2.encode\n')
 
 	for _ in 0 .. max_iterations {
 		es := msgpack.encode_to_json[Person](p)
