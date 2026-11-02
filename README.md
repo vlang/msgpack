@@ -20,3 +20,7 @@ decode only prints the decoded data. This will be implemented soon.
 # Examples
 
 You can see some basic examples are in the `examples/` directory
+
+Float and timestamp decoding supports payloads nested in arrays and structs. Truncated
+float and timestamp payloads return an error. All three MessagePack timestamp formats
+(32, 64, and 96 bits) are supported.

@@ -234,11 +234,13 @@ pub fn (mut d Decoder) decode_float[T](mut val T) ! {
 	data := d.buffer
 	match d.bd {
 		mp_f32 {
-			val = T(math.f32_from_bits(binary.big_endian_u32(data[1..4])))
+			if data.len - d.pos < 4 { return error('truncated float32') }
+			val = T(math.f32_from_bits(binary.big_endian_u32(data[d.pos..d.pos + 4])))
 			d.pos += 4
 		}
 		mp_f64 {
-			val = T(math.f64_from_bits(binary.big_endian_u64(data[1..8])))
+			if data.len - d.pos < 8 { return error('truncated float64') }
+			val = T(math.f64_from_bits(binary.big_endian_u64(data[d.pos..d.pos + 8])))
 			d.pos += 8
 		}
 		else {
@@ -379,10 +381,10 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 					|  0xd6  |   -1   |   seconds in 32-bit unsigned int  |
 					+--------+--------+--------+--------+--------+--------+
 				*/
-				if data[d.pos] != u8(0xFF) {
+				if data.len - d.pos < 5 || data[d.pos] != u8(0xFF) {
 					return error('invalid extension format')
 				}
-				data32 := binary.big_endian_u32(data[d.pos + 1..d.pos + 4])
+				data32 := binary.big_endian_u32(data[d.pos + 1..d.pos + 5])
 				val = time.unix(i64(data32))
 				d.pos += 5
 			}
@@ -394,14 +396,14 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 					|  0xd7  |   -1   | nanosec. in 30-bit unsigned int |   seconds in 34-bit unsigned int    |
 					+--------+--------+--------+--------+--------+------^-+--------+--------+--------+--------+
 				*/
-				if data[d.pos] != u8(0xFF) {
+				if data.len - d.pos < 9 || data[d.pos] != u8(0xFF) {
 					return error('invalid extension format')
 				}
-				data64 := binary.big_endian_u64(data[d.pos + 1..d.pos + 8])
+				data64 := binary.big_endian_u64(data[d.pos + 1..d.pos + 9])
 				sec := int(data64 & 0x00000003ffffffff)
 				nsec := int(data64 >> 34)
 				val = time.unix_nanosecond(i64(sec), nsec)
-				d.pos += 8
+				d.pos += 9
 			}
 			mp_ext_8 {
 				/*
@@ -415,13 +417,13 @@ pub fn (mut d Decoder) decode_time[T](mut val T) ! {
 					+--------+--------+--------+--------+--------+--------+--------+--------+
 				*/
 
-				if data[d.pos] != u8(0x0C) || data[d.pos + 4] != u8(0xFF) {
+				if data.len - d.pos < 14 || data[d.pos] != u8(0x0C) || data[d.pos + 1] != u8(0xFF) {
 					return error('invalide extension format')
 				}
-				data32 := binary.big_endian_u32(data[d.pos + 1 + 4..d.pos + 12])
-				data64 := binary.big_endian_u64(data[d.pos + 1 + 8..d.pos + 12])
+				data32 := binary.big_endian_u32(data[d.pos + 2..d.pos + 6])
+				data64 := binary.big_endian_u64(data[d.pos + 6..d.pos + 14])
 				val = time.unix_nanosecond(i64(data64), int(data32))
-				d.pos += 12
+				d.pos += 14
 			}
 			else {
 				return error('invalid time descriptor byte')
