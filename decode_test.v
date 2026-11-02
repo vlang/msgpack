@@ -60,3 +60,33 @@ fn test_decoding() {
 	// // Test decoding byte slices
 	// assert msgpack.decode[[]u8](hex.decode('c403010203')!)! == [u8(1), 2, 3]
 }
+
+fn test_decode_floats_at_nonzero_offsets() ! {
+	assert msgpack.decode[[]f32](hex.decode('92ca3fc00000cac0100000')!)! == [f32(1.5), -2.25]
+	assert msgpack.decode[[]f64](hex.decode('92cb3ff8000000000000cbc002000000000000')!)! == [
+		1.5,
+		-2.25,
+	]
+}
+
+fn test_decode_timestamp_formats_and_offsets() ! {
+	assert msgpack.decode[time.Time](hex.decode('d7ff0000000400000001')!)! == time.unix_nanosecond(1, 1)
+	assert msgpack.decode[time.Time](hex.decode('c70cff00000001ffffffffffffffff')!)! == time.unix_nanosecond(-1, 1)
+	assert msgpack.decode[[]time.Time](hex.decode('92d7ff0000000400000001d6ff00000002')!)! == [
+		time.unix_nanosecond(1, 1),
+		time.unix(2),
+	]
+}
+
+fn test_decode_truncated_float_and_timestamp() ! {
+	for data in ['ca000000', 'cb00000000000000'] {
+		if _ := msgpack.decode[f64](hex.decode(data)!) {
+			assert false
+		}
+	}
+	for data in ['d6ff000000', 'd7ff00000000000000', 'c70cff0000000000000000000000'] {
+		if _ := msgpack.decode[time.Time](hex.decode(data)!) {
+			assert false
+		}
+	}
+}
