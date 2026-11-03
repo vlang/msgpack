@@ -59,7 +59,7 @@ an error rather than panic: handle it with `!` or `or { ... }`.
 | structs | map | field names as keys; see the attributes below |
 | enums | int | or the member name with `enum_as_string: true` |
 | `?T` | nil when `none` | struct fields, and values to encode |
-| `time.Time` | timestamp extension | with nanoseconds, in UTC |
+| `time.Time` | timestamp extension | with nanoseconds, in UTC; the 32-, 64- and 96-bit formats are all decoded |
 | type aliases | as their base type | |
 | `msgpack.Value` | any value | for data whose shape is not known in advance |
 
