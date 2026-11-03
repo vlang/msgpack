@@ -26,11 +26,11 @@ fn test_decoding() {
 		3,
 	]
 
-	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,2]))! == [u8(1),1,2]
-	// asser msgpack.decode[[]int](msgpack.encode([1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]))! == [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
-	assert msgpack.decode[[]u32](msgpack.encode([u32(1), 1, 2]))! == [u32(1), 1, 2]
-	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,1]))! == [u8(1), 2, 3]
-	assert msgpack.decode[[]int](msgpack.encode([1, 1, 1]))! == [1, 1, 1]
+	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,2])!)! == [u8(1),1,2]
+	// asser msgpack.decode[[]int](msgpack.encode([1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2])!)! == [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+	assert msgpack.decode[[]u32](msgpack.encode([u32(1), 1, 2])!)! == [u32(1), 1, 2]
+	// assert msgpack.decode[[]u8](msgpack.encode([u8(1),1,1])!)! == [u8(1), 2, 3]
+	assert msgpack.decode[[]int](msgpack.encode([1, 1, 1])!)! == [1, 1, 1]
 	assert msgpack.decode[[]int](hex.decode('90')!)! == []
 
 	// // Test decoding maps
@@ -43,8 +43,8 @@ fn test_decoding() {
 	// Test decoding structs
 	assert msgpack.decode[Struct](hex.decode('82a161a44a6f686ea162d20000001e')!)! == Struct{'John', 30}
 	// Round-trip (works regardless of which integer width the encoder picks)
-	assert msgpack.decode[Struct](msgpack.encode(Struct{'John', 30}))! == Struct{'John', 30}
-	assert msgpack.decode[Struct](msgpack.encode(Struct{'', 0}))! == Struct{'', 0}
+	assert msgpack.decode[Struct](msgpack.encode(Struct{'John', 30})!)! == Struct{'John', 30}
+	assert msgpack.decode[Struct](msgpack.encode(Struct{'', 0})!)! == Struct{'', 0}
 
 	// Test decoding booleans
 	assert msgpack.decode[bool](hex.decode('c3')!)! == true

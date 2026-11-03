@@ -1,0 +1,7 @@
+.build/
+.cache/
+deps/
+results/
+native/node_modules/
+native/target/
+__pycache__/
