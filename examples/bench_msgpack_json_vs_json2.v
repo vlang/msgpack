@@ -1,66 +1,69 @@
-// Compare MessagePack with V's current JSON codec.
-// Run with: v -prod run examples/bench_msgpack_json_vs_json2.v
-
+// Compares msgpack with the CBOR and JSON codecs of vlib, on the same data:
+//   v -prod run examples/bench_msgpack_json_vs_json2.v
+// Set MAX_ITERATIONS to change the number of iterations (default 100000).
 module main
 
-import os
+import benchmark
+import encoding.cbor
 import json2
 import msgpack
-import benchmark
-
-// import time
+import os
 
 struct Person {
-	name string
-	age  int
-	// created_at time.Time
+	name  string
+	age   int
+	email string
+	score f64
+	tags  []string
 }
 
 fn main() {
-	max_iterations := os.getenv_opt('MAX_ITERATIONS') or { '1000000' }.int()
-	// s := '{"name":"Bilbo Baggins","age":99,"created_at":1670840340}'
-	s := '{"name":"Bilbo Baggins","age":99}'
+	n := os.getenv_opt('MAX_ITERATIONS') or { '100000' }.int()
+	p := Person{'Bilbo Baggins', 111, 'bilbo@shire.me', 3.5, ['hobbit', 'burglar']}
+	mp := msgpack.encode(p)!
+	cb := cbor.encode(p, cbor.EncodeOpts{})!
+	js := json2.encode(p)
+	// every codec must give the value back before its speed means anything
+	assert msgpack.decode[Person](mp)! == p
+	assert cbor.decode[Person](cb, cbor.DecodeOpts{})! == p
+	assert json2.decode[Person](js)! == p
+	println('${n} iterations; encoded size: msgpack ${mp.len} B, cbor ${cb.len} B, json ${js.len} B')
+	mut total := 0
 	mut b := benchmark.start()
 
-	for _ in 0 .. max_iterations {
-		p := json2.decode[Person](s)!
-		if p.age != 99 {
-			println('error: ${p}')
-		}
+	for _ in 0 .. n {
+		total += msgpack.encode(p)!.len
 	}
-	b.measure('json2.decode\n')
-
-	// encoding measurements:
-	p := json2.decode[Person](s)!
-
-	for _ in 0 .. max_iterations {
-		es := json2.encode(p)
-		if es[0] != `{` {
-			println('json2.encode error: ${es}')
-		}
+	b.measure('msgpack.encode')
+	for _ in 0 .. n {
+		total += cbor.encode(p, cbor.EncodeOpts{})!.len
+	}
+	b.measure('cbor.encode')
+	for _ in 0 .. n {
+		total += json2.encode(p).len
 	}
 	b.measure('json2.encode\n')
 
-	for _ in 0 .. max_iterations {
-		es := msgpack.encode_to_json[Person](p)
-		if es[0] != `{` {
-			println('error: ${es}')
-		}
+	for _ in 0 .. n {
+		total += msgpack.decode[Person](mp)!.age
 	}
-	b.measure('msgpack.encode_to_json')
-
-	for _ in 0 .. max_iterations {
-		es := msgpack.encode[Person](p)
-		if p.age != 99 {
-			println('error: ${es}')
-		}
+	b.measure('msgpack.decode')
+	for _ in 0 .. n {
+		total += cbor.decode[Person](cb, cbor.DecodeOpts{})!.age
 	}
-	b.measure('msgpack.encode\n')
+	b.measure('cbor.decode')
+	for _ in 0 .. n {
+		total += json2.decode[Person](js)!.age
+	}
+	b.measure('json2.decode\n')
 
-	// Not working for now - waiting for #20027 be solved
-	// encoded := msgpack.encode[Person](p)
-	// for _ in 0 .. max_iterations {
-	// 	msgpack.decode[Person](encoded)!
-	// }
-	// b.measure('msgpack.decode')
+	// A reused Packer encodes without allocating a new buffer each time.
+	mut packer := msgpack.new_packer()
+	for _ in 0 .. n {
+		packer.reset()
+		packer.pack(p)!
+		total += packer.bytes().len
+	}
+	b.measure('msgpack Packer.pack, reused')
+	assert total > 0
 }
